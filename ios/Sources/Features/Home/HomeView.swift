@@ -53,11 +53,19 @@ struct HomeView: View {
             .noorBackground()
             .navigationTitle(loc.t("app.name"))
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink { SettingsView() } label: {
                         Image(systemName: "gearshape")
                     }
                 }
+                #else
+                ToolbarItem(placement: .automatic) {
+                    NavigationLink { SettingsView() } label: {
+                        Image(systemName: "gearshape")
+                    }
+                }
+                #endif
             }
             // Only refresh an existing fix here. The first permission prompt is
             // triggered by the user tapping Continue, never automatically.

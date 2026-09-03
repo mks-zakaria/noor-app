@@ -23,7 +23,9 @@ struct GuideDetailView: View {
         }
         .noorBackground()
         .navigationTitle(guide.title.get(loc.code))
+        #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 
     private func stepCard(_ s: GuideStep) -> some View {

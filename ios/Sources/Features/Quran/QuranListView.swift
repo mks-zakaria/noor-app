@@ -46,7 +46,7 @@ struct QuranListView: View {
                     }
                 }
             }
-            .listStyle(.insetGrouped)
+            .listStyle(.automatic)
             .scrollContentBackground(.hidden)
             .noorBackground()
             .navigationTitle(loc.t("quran.title"))

@@ -142,7 +142,9 @@ struct SettingsView: View {
             }
         }
         .navigationTitle(loc.t("settings.title"))
+        #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .onChange(of: settings.notificationsEnabled) { _, enabled in
             handleNotifications(enabled)
         }

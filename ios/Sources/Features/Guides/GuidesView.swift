@@ -25,7 +25,7 @@ struct GuidesView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.automatic)
         .scrollContentBackground(.hidden)
         .noorBackground()
         .navigationTitle(loc.t("guides.title"))

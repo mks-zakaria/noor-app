@@ -16,9 +16,11 @@ struct RootView: View {
                 .tag(0)
                 .tabItem { Label(loc.t("tab.prayer"), systemImage: "sun.horizon.fill") }
 
+#if !os(macOS)
             QiblaView()
                 .tag(1)
                 .tabItem { Label(loc.t("tab.qibla"), systemImage: "location.north.line.fill") }
+#endif
 
             QuranListView()
                 .tag(2)

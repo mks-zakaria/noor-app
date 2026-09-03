@@ -205,7 +205,9 @@ struct HisnSectionView: View {
         }
         .noorBackground()
         .navigationTitle(section.title(loc.code))
+        #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 
     private func chapterRow(_ c: HisnChapter) -> some View {
@@ -312,8 +314,11 @@ struct DhikrReaderView: View {
         }
         .noorBackground()
         .navigationTitle(navTitle)
+        #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
+            #if os(iOS)
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     withAnimation(.easeInOut(duration: 0.3)) {
@@ -323,6 +328,17 @@ struct DhikrReaderView: View {
                     Image(systemName: "arrow.counterclockwise")
                 }
             }
+            #else
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        for item in items { remaining[item.id] = item.count }
+                    }
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                }
+            }
+            #endif
         }
         .shareCardSheet($sharing)
     }
@@ -380,7 +396,9 @@ struct DhikrReaderView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { count(d) }
+        #if os(iOS)
         .sensoryFeedback(.increase, trigger: left)
+        #endif
     }
 
     private func count(_ d: Dhikr) {

@@ -1,8 +1,10 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
+#endif
 
 /// Noor color tokens — deep emerald/teal primary with a warm gold accent.
-/// Each token resolves automatically for light/dark via a dynamic UIColor.
+/// Each token resolves automatically for light/dark.
 enum Palette {
     static let text            = dynamic(light: 0x0B1F1A, dark: 0xECF4F0)
     static let textSecondary   = dynamic(light: 0x4B6157, dark: 0x9FB3AB)
@@ -18,9 +20,16 @@ enum Palette {
     static let danger           = dynamic(light: 0xC0392B, dark: 0xE57368)
 
     private static func dynamic(light: Int, dark: Int) -> Color {
+#if os(iOS)
         Color(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light)
         })
+#else
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(hex: dark) : NSColor(hex: light)
+        })
+#endif
     }
 }
 
@@ -55,6 +64,7 @@ enum Radius {
     static let pill: CGFloat = 999
 }
 
+#if os(iOS)
 extension UIColor {
     convenience init(hex: Int) {
         self.init(
@@ -65,3 +75,16 @@ extension UIColor {
         )
     }
 }
+#else
+import AppKit
+extension NSColor {
+    convenience init(hex: Int) {
+        self.init(
+            red: CGFloat((hex >> 16) & 0xFF) / 255,
+            green: CGFloat((hex >> 8) & 0xFF) / 255,
+            blue: CGFloat(hex & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+}
+#endif

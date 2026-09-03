@@ -26,7 +26,9 @@ final class QiblaManager: NSObject, CLLocationManagerDelegate {
     }
 
     func stop() {
+        #if os(iOS)
         manager.stopUpdatingHeading()
+        #endif
     }
 
     func locationManager(_ m: CLLocationManager, didUpdateHeading newHeading: CLHeading) {

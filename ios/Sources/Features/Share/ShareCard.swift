@@ -1,5 +1,9 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Where to send someone who receives a shared card.
 ///
@@ -252,23 +256,39 @@ struct ShareCardView: View {
 
 @MainActor
 enum ShareCardRenderer {
-    /// Renders the card to a PNG-ready image. Returns nil only if SwiftUI fails to
+    /// Renders the card to a rasterized image. Returns nil only if SwiftUI fails to
     /// rasterize, which callers treat as "fall back to sharing plain text".
     static func image(content: ShareCardContent,
                       style: ShareCardStyle,
-                      includeTranslation: Bool) -> UIImage? {
+                      includeTranslation: Bool) -> ImageRaster? {
         let renderer = ImageRenderer(
             content: ShareCardView(content: content, style: style,
                                    includeTranslation: includeTranslation)
         )
         renderer.scale = 3
         renderer.isOpaque = true
+#if os(iOS)
         return renderer.uiImage
+#else
+        return renderer.nsImage
+#endif
     }
 }
 
 extension Color {
     init(hex: Int) {
+#if os(iOS)
         self.init(uiColor: UIColor(hex: hex))
+#else
+        self.init(nsColor: NSColor(hex: hex))
+#endif
     }
 }
+
+#if os(macOS)
+/// A platform-neutral alias so callers can declare the rasterized share image
+/// without dragging UIKit/AppKit types into shared code.
+typealias ImageRaster = NSImage
+#else
+typealias ImageRaster = UIImage
+#endif

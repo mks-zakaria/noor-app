@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.noor
   deploymentTarget:
     iOS: "18.0"
+    macOS: "15.0"
   createIntermediateGroups: true
   groupSortPosition: top
 
@@ -138,3 +139,73 @@ targets:
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: Noor
+
+  # macOS companion — shares all Swift sources with the iOS target.
+  # Qibla tab is excluded via #if at compile time; WidgetKit calls compile
+  # as no-ops when no widget extension target is linked.
+  Noor-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+        excludes:
+          - "**/.claude/**"
+          - "**/.claude"
+      - path: Resources
+        excludes:
+          - "**/.claude/**"
+          - "**/.claude"
+      # macOS loads the app icon from a classic .icns via CFBundleIconFile.
+      # The shared Assets.xcassets compiles fine on iOS but produces no app
+      # icon output on macOS, so ship a dedicated .icns for the Mac target.
+      - path: Resources-macOS
+        buildPhase: resources
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: Adhan
+      - target: NoorWidget-macOS
+        embed: true
+    entitlements:
+      path: Noor.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.zakaria.noor.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor
+        MARKETING_VERSION: "1.1.1"
+        CURRENT_PROJECT_VERSION: "5"
+        SWIFT_VERSION: "5.0"
+        INFOPLIST_FILE: Resources-macOS/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        # macOS needs a location/photo usage description in the custom plist.
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+
+  # macOS WidgetKit extension — shares the verse data + prefs contract, but has
+  # its own @main bundle and widget config (macOS has no accessory families).
+  NoorWidget-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Widget-macOS
+        excludes:
+          - Info.plist
+      - path: Widget/Verses.swift
+      - path: Sources/Services/WidgetPrefs.swift
+    entitlements:
+      path: Widget-macOS.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.zakaria.noor.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widget
+        MARKETING_VERSION: "1.1.1"
+        CURRENT_PROJECT_VERSION: "5"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Widget-macOS/Info.plist
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic

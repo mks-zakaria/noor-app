@@ -1,6 +1,8 @@
 import SwiftUI
 import AVFoundation
+#if os(iOS)
 import UIKit
+#endif
 
 struct SurahView: View {
     let surah: Surah
@@ -56,11 +58,19 @@ struct SurahView: View {
         }
         .noorBackground()
         .navigationTitle(surah.displayName(loc.code))
+        #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
+            #if os(iOS)
             ToolbarItem(placement: .topBarTrailing) { autoScrollButton }
             ToolbarItem(placement: .topBarTrailing) { fontMenu }
             ToolbarItem(placement: .topBarTrailing) { audioButton }
+            #else
+            ToolbarItem(placement: .automatic) { autoScrollButton }
+            ToolbarItem(placement: .automatic) { fontMenu }
+            ToolbarItem(placement: .automatic) { audioButton }
+            #endif
         }
         .safeAreaInset(edge: .bottom) {
             if isAutoScrolling { speedControls.transition(.move(edge: .bottom).combined(with: .opacity)) }
@@ -244,7 +254,9 @@ struct SurahView: View {
         // Reading hands-free is the whole point, so don't let the screen lock —
         // and always hand the idle timer back when the glide stops or the screen
         // goes away.
+#if os(iOS)
         UIApplication.shared.isIdleTimerDisabled = on
+#endif
         if on {
             driveAutoScroll()
         } else {

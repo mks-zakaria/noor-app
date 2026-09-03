@@ -19,7 +19,9 @@ struct AdkarCelebrationOverlay: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 44, weight: .semibold))
                     .foregroundStyle(Palette.accent)
+                    #if os(iOS)
                     .symbolEffect(.pulse)
+                    #endif
 
                 Text(loc.t("adkar.celebrateTitle"))
                     .font(.title2.weight(.bold))

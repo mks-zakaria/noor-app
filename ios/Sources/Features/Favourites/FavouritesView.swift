@@ -48,7 +48,7 @@ struct FavouritesView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.automatic)
         .scrollContentBackground(.hidden)
         .noorBackground()
         .navigationTitle(loc.t("favourites.title"))

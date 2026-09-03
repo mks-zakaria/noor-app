@@ -1,7 +1,11 @@
 import Foundation
 import CoreLocation
 import Observation
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Provides the user's coordinate and a human-readable place name.
 @Observable
@@ -21,7 +25,11 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     var isAuthorized: Bool {
+        #if os(iOS)
         status == .authorizedWhenInUse || status == .authorizedAlways
+        #else
+        status == .authorized || status == .authorizedAlways
+        #endif
     }
 
     /// True once the user has actively declined. Only in this state may the app
@@ -33,22 +41,35 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     func request() {
-        switch manager.authorizationStatus {
+        let status = manager.authorizationStatus
+        switch status {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways:
-            manager.requestLocation()
         default:
-            break
+            #if os(iOS)
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                manager.requestLocation()
+            }
+            #else
+            if status == .authorized || status == .authorizedAlways {
+                manager.requestLocation()
+            }
+            #endif
         }
     }
 
     /// Sends the user to the app's own Settings page. Used only from the
     /// already-denied state, where iOS will not re-prompt.
     func openSettings() {
+#if os(iOS)
         if let url = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(url)
         }
+#else
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") {
+            NSWorkspace.shared.open(url)
+        }
+#endif
     }
 
     // MARK: CLLocationManagerDelegate

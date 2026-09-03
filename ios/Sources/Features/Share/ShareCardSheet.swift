@@ -1,5 +1,9 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Pick a paper, then share. The preview is the same view that gets rasterized,
 /// so what the user approves is exactly what leaves the phone.
@@ -52,14 +56,24 @@ struct ShareCardSheet: View {
             }
             .noorBackground()
             .navigationTitle(loc.t("share.title"))
+#if !os(macOS)
             .navigationBarTitleDisplayMode(.inline)
+#endif
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(loc.t("common.done")) { dismiss() }
                 }
+                #else
+                ToolbarItem(placement: .automatic) {
+                    Button(loc.t("common.done")) { dismiss() }
+                }
+                #endif
             }
         }
+#if os(iOS)
         .sheet(item: $payload) { ActivityView(items: $0.items) }
+#endif
     }
 
     private var preview: some View {
@@ -146,15 +160,43 @@ struct ShareCardSheet: View {
             content: content, style: style,
             includeTranslation: includeTranslation && hasTranslation
         ) else {
-            payload = SharePayload(items: [content.plainText(footer: loc.t("share.footer")),
-                                           AppLink.url])
+            shareText()
             return
         }
+#if os(iOS)
         payload = SharePayload(items: [image, AppLink.url])
+#else
+        presentPicker([image, AppLink.url])
+#endif
     }
 
+    private func shareText() {
+#if os(iOS)
+        payload = SharePayload(items: [content.plainText(footer: loc.t("share.footer")),
+                                       AppLink.url])
+#else
+        presentPicker([content.plainText(footer: loc.t("share.footer")), AppLink.url])
+#endif
+    }
+
+#if os(macOS)
+    /// Presents the AppKit sharing picker anchored to the current window.
+    private func presentPicker(_ items: [Any]) {
+        guard let window = NSApp.keyWindow else { return }
+        let picker = NSSharingServicePicker(items: items)
+        picker.show(relativeTo: NSRect(x: window.frame.midX, y: window.frame.midY, width: 1, height: 1),
+                    of: window.contentView!, preferredEdge: .minY)
+    }
+#endif
+
     private func copyText() {
-        UIPasteboard.general.string = content.plainText(footer: loc.t("share.footer"))
+        let text = content.plainText(footer: loc.t("share.footer"))
+#if os(iOS)
+        UIPasteboard.general.string = text
+#else
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+#endif
         withAnimation { didCopy = true }
         Task {
             try? await Task.sleep(for: .seconds(2))
@@ -169,6 +211,7 @@ private struct SharePayload: Identifiable {
     let items: [Any]
 }
 
+#if os(iOS)
 /// `ShareLink` only carries one kind of item; sharing an image together with a URL
 /// needs the UIKit sheet.
 private struct ActivityView: UIViewControllerRepresentable {
@@ -184,6 +227,7 @@ private struct ActivityView: UIViewControllerRepresentable {
 
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
+#endif
 
 // MARK: - Entry point
 
