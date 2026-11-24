@@ -31,8 +31,32 @@ enum QuranService {
         URL(string: "https://server8.mp3quran.net/afs/\(String(format: "%03d", n)).mp3")
     }
 
-    /// Fetch a surah (Arabic + optional translation), caching to disk so re-reads work offline.
+    /// The bundled language that matches a translation edition ("" = Arabic only).
+    private static func bundledLanguage(for edition: String?) -> String? {
+        switch edition {
+        case nil: return ""
+        case "en.sahih": return "en"
+        case "fr.hamidullah": return "fr"
+        default: return nil
+        }
+    }
+
+    /// The surah from the copy bundled with the app, so reading never needs a connection.
+    static func bundledSurah(_ n: Int, translation: String?) -> SurahContent? {
+        guard let lang = bundledLanguage(for: translation),
+              let arabic = QuranIndex.shared.texts(surah: n, language: "ar") else { return nil }
+        let translated = lang.isEmpty ? nil : QuranIndex.shared.texts(surah: n, language: lang)
+        let ayahs = arabic.enumerated().map { i, text in
+            Ayah(number: i + 1, arabic: text,
+                 english: translated.flatMap { $0.indices.contains(i) ? $0[i] : nil } ?? "")
+        }
+        return ayahs.isEmpty ? nil : SurahContent(number: n, ayahs: ayahs)
+    }
+
+    /// A surah (Arabic + optional translation). Served from the bundled Quran;
+    /// the network path is only a fallback if the bundled files are missing.
     static func fetchSurah(_ n: Int, translation: String?) async throws -> SurahContent {
+        if let bundled = bundledSurah(n, translation: translation) { return bundled }
         if let cached = loadCache(n, translation: translation) { return cached }
 
         let editionList = translation.map { "\(arabicEdition),\($0)" } ?? arabicEdition

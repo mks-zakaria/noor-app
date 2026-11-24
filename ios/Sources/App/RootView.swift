@@ -30,9 +30,9 @@ struct RootView: View {
                 .tag(3)
                 .tabItem { Label(loc.t("tab.adkar"), systemImage: "heart.text.square.fill") }
 
-            WirdView()
+            IbadahView()
                 .tag(4)
-                .tabItem { Label(loc.t("tab.wird"), systemImage: "checklist") }
+                .tabItem { Label(loc.t("tab.ibadah"), systemImage: "checklist") }
         }
         .id(loc.code)   // rebuild the tab bar when language changes
         .overlay {

@@ -9,9 +9,18 @@ struct DayTimes {
 }
 
 enum PrayerService {
-    static func parameters(method: MethodKey, madhab: MadhabKey) -> CalculationParameters {
-        var p = method.adhan.params
+    static func parameters(method: MethodKey, madhab: MadhabKey,
+                           offsets: [Int] = PrayerTuning.load()) -> CalculationParameters {
+        var p = method.params
         p.madhab = madhab.adhan
+        // Where twilight never reaches the Fajr/Isha angle (Europe in summer), adhan's default
+        // "middle of the night" put Isha after Fajr in Paris (Isha 01:07, Fajr 01:52 on 21 June).
+        // The twilight-angle rule is what api.aladhan.com and most apps use; it only changes
+        // the times when the angle is not reached, so lower latitudes are unaffected.
+        p.highLatitudeRule = .twilightAngle
+        let user = offsets.count == 6 ? offsets : Array(repeating: 0, count: 6)
+        let o = zip(user, method.officialMinutes).map { $0 + $1 }
+        p.adjustments = PrayerAdjustments(fajr: o[0], sunrise: o[1], dhuhr: o[2], asr: o[3], maghrib: o[4], isha: o[5])
         return p
     }
 
@@ -20,9 +29,12 @@ enum PrayerService {
         method: MethodKey, madhab: MadhabKey,
         date: Date = Date()
     ) -> DayTimes? {
-        let coords = Coordinates(latitude: lat, longitude: lng)
         let cal = Calendar(identifier: .gregorian)
         let comps = cal.dateComponents([.year, .month, .day], from: date)
+        if method == .morocco, let official = moroccoTimes(lat: lat, lng: lng, comps: comps, date: date) {
+            return official
+        }
+        let coords = Coordinates(latitude: lat, longitude: lng)
         guard let pt = PrayerTimes(
             coordinates: coords, date: comps,
             calculationParameters: parameters(method: method, madhab: madhab)
@@ -36,6 +48,32 @@ enum PrayerService {
             ],
             lastThird: sunnah?.lastThirdOfTheNight
         )
+    }
+
+    /// Morocco: the ministry's own calculation at the nearest ministry city (see HabousTimes),
+    /// plus the user's minute offsets. Asr is Maliki (the ministry's), whatever the madhab setting.
+    private static func moroccoTimes(lat: Double, lng: Double, comps: DateComponents, date: Date) -> DayTimes? {
+        guard let y = comps.year, let m = comps.month, let d = comps.day,
+              let t = HabousTimes.times(lat: lat, lng: lng, year: y, month: m, day: d,
+                                        utcOffsetMinutes: TimeZone.current.secondsFromGMT(for: date) / 60)
+        else { return nil }
+        let o = PrayerTuning.load()
+        let order: [PrayerName] = [.fajr, .sunrise, .dhuhr, .asr, .maghrib, .isha]
+        var times: [PrayerName: Date] = [:]
+        for (i, p) in order.enumerated() { times[p] = t[i].addingTimeInterval(Double(o[i]) * 60) }
+        // Last third of the night: from Maghrib to the next day's Fajr.
+        var lastThird: Date?
+        if let next = Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: date) {
+            let nc = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: next)
+            if let ny = nc.year, let nm = nc.month, let nd = nc.day,
+               let nt = HabousTimes.times(lat: lat, lng: lng, year: ny, month: nm, day: nd,
+                                          utcOffsetMinutes: TimeZone.current.secondsFromGMT(for: next) / 60),
+               let maghrib = times[.maghrib] {
+                let night = nt[0].timeIntervalSince(maghrib)
+                lastThird = maghrib.addingTimeInterval(night * 2 / 3)
+            }
+        }
+        return DayTimes(times: times, lastThird: lastThird)
     }
 
     /// Compass bearing (degrees, clockwise from true north) toward the Kaaba.

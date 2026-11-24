@@ -17,3 +17,23 @@ enum WidgetSync {
         WidgetCenter.shared.reloadAllTimelines()
     }
 }
+
+/// Publishes what the prayer widgets need to compute times on their own.
+enum PrayerContextSync {
+    /// Kinds of every widget that computes prayer times (see Widget/PrayerWidget.swift).
+    static let prayerWidgetKinds = ["NoorPrayerWidget", "NoorRamadanWidget", "NoorTodayWidget"]
+
+    static func push(settings: SettingsStore, location: LocationManager, langCode: String) {
+        guard let c = location.coordinate else { return }
+        let ctx = SharedPrayerContext(
+            lat: c.latitude, lng: c.longitude,
+            method: settings.method.rawValue, madhab: settings.madhab.rawValue,
+            hour12: settings.hour12, language: langCode, place: location.placeName,
+            hijriOffset: settings.hijriOffset,
+            offsets: PrayerTuning.load()
+        )
+        if ctx.save() {
+            for kind in prayerWidgetKinds { WidgetCenter.shared.reloadTimelines(ofKind: kind) }
+        }
+    }
+}

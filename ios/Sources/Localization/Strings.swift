@@ -9,7 +9,10 @@ enum Strings {
         return row?[code] ?? row?["en"] ?? key
     }
 
-    static let table: [String: [String: String]] = [
+    /// The full table: 1.0–1.1 strings plus `v12`, which wins on a shared key.
+    static let table: [String: [String: String]] = base.merging(v12) { _, new in new }
+
+    static let base: [String: [String: String]] = [
         // Notifications
         "notif.body": ["en": "It's time for", "fr": "C'est l'heure de la prière —", "ar": "حان وقت صلاة"],
         "notif.testTitle": ["en": "Adhan test", "fr": "Test de l'adhan", "ar": "اختبار الأذان"],

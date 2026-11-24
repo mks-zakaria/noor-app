@@ -6,6 +6,11 @@ import Observation
 final class SettingsStore {
     var method: MethodKey { didSet { d.set(method.rawValue, forKey: Keys.method) } }
     var madhab: MadhabKey { didSet { d.set(madhab.rawValue, forKey: Keys.madhab) } }
+    /// Use the official method (and Asr madhab) of the country the user is in. On by default for
+    /// anyone who never picked a method; picking one by hand turns it off.
+    var methodAuto: Bool { didSet { d.set(methodAuto, forKey: Keys.methodAuto) } }
+    /// Minute corrections per prayer (fajr, sunrise, dhuhr, asr, maghrib, isha) to match the local mosque.
+    var prayerOffsets: [Int] { didSet { PrayerTuning.save(prayerOffsets) } }
     var hour12: Bool { didSet { d.set(hour12, forKey: Keys.hour12) } }
     /// Light / dark / follow-system appearance.
     var theme: AppTheme { didSet { d.set(theme.rawValue, forKey: Keys.theme) } }
@@ -43,11 +48,26 @@ final class SettingsStore {
         }
     }
 
+    // Ramadan
+    /// Minutes before Fajr that Imsak is shown in the timetable (0 = none).
+    var imsakMinutes: Int { didSet { d.set(imsakMinutes, forKey: Keys.imsakMinutes) } }
+    /// Notify before suhoor ends during Ramadan.
+    var suhoorReminder: Bool { didSet { d.set(suhoorReminder, forKey: Keys.suhoorReminder) } }
+    /// How many minutes before Fajr the suhoor reminder fires.
+    var suhoorLeadMinutes: Int { didSet { d.set(suhoorLeadMinutes, forKey: Keys.suhoorLead) } }
+    /// Maghrib alert worded as iftar, with the iftar du'a, during Ramadan.
+    var iftarAlert: Bool { didSet { d.set(iftarAlert, forKey: Keys.iftarAlert) } }
+    /// Reminder on the evenings that begin the odd nights of the last ten.
+    var qadrReminders: Bool { didSet { d.set(qadrReminders, forKey: Keys.qadrReminders) } }
+    /// Countdown to the next prayer (or suhoor / iftar) on the Lock Screen.
+    var liveActivity: Bool { didSet { d.set(liveActivity, forKey: Keys.liveActivity) } }
+
     @ObservationIgnored private let d = UserDefaults.standard
 
     private enum Keys {
         static let method = "noor.method"
         static let madhab = "noor.madhab"
+        static let methodAuto = "noor.methodAuto"
         static let hour12 = "noor.hour12"
         static let theme = "noor.theme"
         static let hijriOffset = "noor.hijriOffset"
@@ -60,6 +80,24 @@ final class SettingsStore {
         static let quranAutoScrollSpeed = "noor.quranAutoScrollSpeed"
         static let widgetEnabled = "noor.widgetEnabled"
         static let widgetDisplay = "noor.widgetDisplay"
+        static let imsakMinutes = "noor.ramadan.imsakMinutes"
+        static let suhoorReminder = "noor.ramadan.suhoorReminder"
+        static let suhoorLead = "noor.ramadan.suhoorLead"
+        static let iftarAlert = "noor.ramadan.iftarAlert"
+        static let qadrReminders = "noor.ramadan.qadrReminders"
+        static let liveActivity = "noor.liveActivity"
+    }
+
+    /// While Automatic is on, switch to the official method of `countryCode`.
+    /// Returns true when the method or madhab changed (callers then reschedule).
+    @discardableResult
+    func applyCountry(_ countryCode: String) -> Bool {
+        guard methodAuto, !countryCode.isEmpty else { return false }
+        let pick = MethodKey.forCountry(countryCode)
+        guard pick.method != method || pick.madhab != madhab else { return false }
+        method = pick.method
+        madhab = pick.madhab
+        return true
     }
 
     static let defaultPrayers: Set<String> = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
@@ -72,6 +110,9 @@ final class SettingsStore {
     init() {
         method = MethodKey(rawValue: d.string(forKey: Keys.method) ?? "") ?? .muslimWorldLeague
         madhab = MadhabKey(rawValue: d.string(forKey: Keys.madhab) ?? "") ?? .shafi
+        // Someone who already chose a method in an earlier version keeps it.
+        methodAuto = d.object(forKey: Keys.methodAuto) as? Bool ?? (d.string(forKey: Keys.method) == nil)
+        prayerOffsets = PrayerTuning.load()
         hour12 = d.object(forKey: Keys.hour12) as? Bool ?? true
         theme = AppTheme(rawValue: d.string(forKey: Keys.theme) ?? "") ?? .system
         hijriOffset = d.object(forKey: Keys.hijriOffset) as? Int ?? 0
@@ -90,6 +131,12 @@ final class SettingsStore {
         }
         widgetEnabled = d.object(forKey: Keys.widgetEnabled) as? Bool ?? true
         widgetDisplay = VerseDisplay(rawValue: d.string(forKey: Keys.widgetDisplay) ?? "") ?? .both
+        imsakMinutes = d.object(forKey: Keys.imsakMinutes) as? Int ?? 10
+        suhoorReminder = d.object(forKey: Keys.suhoorReminder) as? Bool ?? true
+        suhoorLeadMinutes = d.object(forKey: Keys.suhoorLead) as? Int ?? 30
+        iftarAlert = d.object(forKey: Keys.iftarAlert) as? Bool ?? true
+        qadrReminders = d.object(forKey: Keys.qadrReminders) as? Bool ?? true
+        liveActivity = d.object(forKey: Keys.liveActivity) as? Bool ?? false
     }
 
     /// Initial sync happens in the app's scene-phase handler, where the active

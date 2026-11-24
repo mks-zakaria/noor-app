@@ -6,11 +6,16 @@ import UIKit
 
 struct SurahView: View {
     let surah: Surah
+    /// Ayah to open at (from Juz, search, or the Khatmah portion); nil = the top.
+    var startAyah: Int? = nil
 
     @Environment(BookmarksStore.self) private var bookmarks
     @Environment(SettingsStore.self) private var settings
     @Environment(LocalizationManager.self) private var loc
+    @Environment(KhatmahStore.self) private var khatmah
     @State private var content: SurahContent?
+    /// Furthest ayah seen on screen in this visit.
+    @State private var furthestAyah = 0
     @State private var loadError: String?
     @State private var isLoading = false
     @State private var player: AVPlayer?
@@ -31,6 +36,7 @@ struct SurahView: View {
                 if let content {
                     ForEach(content.ayahs) { ayah in
                         ayahView(ayah)
+                            .id(ayah.number)
                     }
                 } else if isLoading {
                     ProgressView().padding(.top, Spacing.six)
@@ -41,8 +47,15 @@ struct SurahView: View {
             .padding(Spacing.three)
             .frame(maxWidth: 700)
             .frame(maxWidth: .infinity)
+            .scrollTargetLayout()
         }
         .scrollPosition($scrollPosition)
+        // Reading progress: last read position and the khatmah advance as ayahs
+        // pass through the screen, not merely when the surah is opened.
+        .onScrollTargetVisibilityChange(idType: Int.self, threshold: 0.6) { visible in
+            guard let last = visible.max(), last > furthestAyah else { return }
+            recordProgress(upTo: last)
+        }
         .onScrollGeometryChange(for: ScrollTracker.Snapshot.self) { geometry in
             ScrollTracker.Snapshot(
                 offset: geometry.contentOffset.y,
@@ -123,6 +136,11 @@ struct SurahView: View {
                     .font(.callout)
                     .foregroundStyle(Palette.textSecondary)
                 HStack {
+                    if let page = QuranIndex.shared.page(surah: surah.number, ayah: ayah.number) {
+                        Text("\(loc.t("quran.page")) \(page)")
+                            .font(.caption2)
+                            .foregroundStyle(Palette.textSecondary)
+                    }
                     Text("\(surah.number):\(ayah.number)")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Palette.primary)
@@ -310,11 +328,25 @@ struct SurahView: View {
         do {
             let edition = QuranService.translationEdition(for: loc.code)
             content = try await QuranService.fetchSurah(surah.number, translation: edition)
-            bookmarks.setLastRead(surah: surah.number, surahName: surah.name, ayah: 1)
+            if let startAyah, startAyah > 1 {
+                // Let the cards lay out before jumping to the requested ayah.
+                try? await Task.sleep(for: .milliseconds(150))
+                scrollPosition.scrollTo(id: startAyah, anchor: .top)
+            } else {
+                bookmarks.setLastRead(surah: surah.number, surahName: surah.name, ayah: 1)
+            }
         } catch {
             loadError = loc.t("quran.loadError")
         }
         isLoading = false
+    }
+
+    private func recordProgress(upTo ayah: Int) {
+        furthestAyah = ayah
+        bookmarks.setLastRead(surah: surah.number, surahName: surah.name, ayah: ayah)
+        if let pages = QuranIndex.shared.completedPages(throughSurah: surah.number, ayah: ayah) {
+            khatmah.recordReading(completedPages: pages)
+        }
     }
 
     private func toggleAudio() {

@@ -37,6 +37,7 @@ targets:
       testTargets:
         - NoorTests
         - NoorUITests
+        - NoorWidgetRender
     # Critical Alerts (adhan overrides silent/Focus) needs Apple approval before it
     # can be signed. Request it at https://developer.apple.com/contact/request/notifications-critical-alerts-entitlement
     # for team JF83ACY9N9 + com.noor.app, then uncomment to enable:
@@ -47,8 +48,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor
-        MARKETING_VERSION: "1.1.1"
-        CURRENT_PROJECT_VERSION: "5"
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "8"
         SWIFT_VERSION: "5.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         DEVELOPMENT_TEAM: "JF83ACY9N9"
@@ -63,6 +64,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Noor
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Lock Screen / Dynamic Island countdown (ActivityKit), started locally by the app.
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         # Declares export compliance in the binary so App Store Connect stops
         # asking on every upload. Accurate as of build 3: the app implements no
@@ -85,9 +88,22 @@ targets:
   NoorWidget:
     type: app-extension
     platform: iOS
+    # The prayer widget computes times itself, so it compiles the prayer model,
+    # the calculator and the string tables; Sources/Shared is the App Group contract
+    # (prayer context, tasbih state, intents, Live Activity attributes).
     sources:
       - path: Widget
       - path: Sources/Services/WidgetPrefs.swift
+      - path: Sources/Shared
+      - path: Sources/Models/PrayerModels.swift
+      - path: Sources/Services/PrayerService.swift
+      - path: Sources/Localization/Strings.swift
+      - path: Sources/Localization/StringsV12.swift
+      # Ministry of Habous cities (coordinates + horizon) for the official Moroccan times.
+      - path: Resources/Morocco
+        buildPhase: resources
+    dependencies:
+      - package: Adhan
     entitlements:
       path: NoorWidget.entitlements
       properties:
@@ -96,8 +112,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widget
-        MARKETING_VERSION: "1.1.1"
-        CURRENT_PROJECT_VERSION: "5"
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "8"
         SWIFT_VERSION: "5.0"
         DEVELOPMENT_TEAM: "JF83ACY9N9"
         CODE_SIGN_STYLE: Manual
@@ -174,8 +190,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor
-        MARKETING_VERSION: "1.1.1"
-        CURRENT_PROJECT_VERSION: "5"
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "8"
         SWIFT_VERSION: "5.0"
         INFOPLIST_FILE: Resources-macOS/Info.plist
         GENERATE_INFOPLIST_FILE: NO
@@ -202,10 +218,39 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widget
-        MARKETING_VERSION: "1.1.1"
-        CURRENT_PROJECT_VERSION: "5"
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "8"
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Widget-macOS/Info.plist
         DEVELOPMENT_TEAM: "JF83ACY9N9"
         CODE_SIGN_STYLE: Automatic
+
+  # Not shipped — renders the Lock Screen widgets and the Live Activity banner to
+  # PNGs at fixed moments; tools/make_lockscreen.py turns them into store
+  # screenshots and ad images. Hostless: it compiles the widget views directly.
+  NoorWidgetRender:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/WidgetRender
+      - path: Widget
+        excludes:
+          - NoorWidgetBundle.swift
+          - Info.plist
+      - path: Sources/Shared
+      - path: Sources/Services/WidgetPrefs.swift
+      - path: Sources/Models/PrayerModels.swift
+      - path: Sources/Services/PrayerService.swift
+      - path: Sources/Localization/Strings.swift
+      - path: Sources/Localization/StringsV12.swift
+      - path: Resources/Morocco
+        buildPhase: resources
+    dependencies:
+      - package: Adhan
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widgetrender
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES

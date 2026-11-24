@@ -1,7 +1,14 @@
 import SwiftUI
 
 /// A daily spiritual checklist (wird) whose progress resets each day.
+/// Pushed from the Ibadah tab. Its prayer rows are the prayer tracker's entries,
+/// so a prayer is never ticked in two places.
 struct WirdView: View {
+    /// Wird rows that mirror a prayer in `PrayerLogStore`.
+    static let prayerRows: [String: PrayerName] = [
+        "fajr_sunnah": .fajr, "dhuhr": .dhuhr, "asr": .asr, "maghrib": .maghrib, "isha": .isha,
+    ]
+
     private static let tasks: [(id: String, title: String, arabic: String, systemImage: String)] = [
         ("fajr_sunnah", "Fajr Sunnah & Prayer", "الفجر", "sunrise"),
         ("morning_adkar", "Morning Adkar", "أذكار الصباح", "sun.max"),
@@ -16,7 +23,15 @@ struct WirdView: View {
     ]
 
     @Environment(LocalizationManager.self) private var loc
-    @State private var done: Set<String> = []
+    @Environment(PrayerLogStore.self) private var prayerLog
+    @State private var ownDone: Set<String> = []
+
+    /// Rows ticked today: the wird's own items plus prayers logged in the tracker.
+    private var done: Set<String> {
+        var s = ownDone
+        for (id, prayer) in Self.prayerRows where prayerLog.status(prayer)?.counts == true { s.insert(id) }
+        return s
+    }
 
     private var dayKey: String {
         let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
@@ -28,7 +43,6 @@ struct WirdView: View {
     }
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 VStack(spacing: Spacing.three) {
                     progressCard
@@ -50,7 +64,6 @@ struct WirdView: View {
             .noorBackground()
             .navigationTitle(loc.t("wird.title"))
             .onAppear(perform: loadToday)
-        }
     }
 
     private var progressCard: some View {
@@ -102,12 +115,16 @@ struct WirdView: View {
     // MARK: Persistence
 
     private func toggle(_ id: String) {
-        if done.contains(id) { done.remove(id) } else { done.insert(id) }
-        UserDefaults.standard.set(Array(done), forKey: dayKey)
+        if let prayer = Self.prayerRows[id] {
+            prayerLog.toggle(prayer)
+            return
+        }
+        if ownDone.contains(id) { ownDone.remove(id) } else { ownDone.insert(id) }
+        UserDefaults.standard.set(Array(ownDone), forKey: dayKey)
     }
 
     private func loadToday() {
         let saved = UserDefaults.standard.stringArray(forKey: dayKey) ?? []
-        done = Set(saved)
+        ownDone = Set(saved).subtracting(Self.prayerRows.keys)
     }
 }

@@ -26,6 +26,7 @@ struct HomeView: View {
                     dateHeader
                     if let times = today, let c = coordinate {
                         nextPrayerHero(times: times, c: c)
+                        RamadanHeroCard()
                         prayerList(times)
                     } else if location.isDenied {
                         locationDeniedNotice
@@ -34,10 +35,13 @@ struct HomeView: View {
                     } else {
                         locatingPlaceholder
                     }
+                    if today == nil { RamadanHeroCard() }
+                    KhatmahTodayCard()
                     continueReadingCard
                     HStack(spacing: Spacing.three) {
                         learnCard
                         favouritesCard
+                        tasbihCard
                     }
                     if showRateCard {
                         RateCard {
@@ -158,10 +162,14 @@ struct HomeView: View {
                         Text(p.label(loc.code))
                             .foregroundStyle(Palette.text)
                             .fontWeight(isNext ? .semibold : .regular)
-                        Spacer()
+                            .lineLimit(1)
+                            .fixedSize()
+                        Spacer(minLength: Spacing.one)
                         if loc.code != "ar" {
                             Text(p.ar)
                                 .foregroundStyle(Palette.textSecondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                         }
                         if let at = times[p] {
                             Text(at.timeString(hour12: settings.hour12))
@@ -169,8 +177,16 @@ struct HomeView: View {
                                 .foregroundStyle(isNext ? Palette.primary : Palette.text)
                                 .frame(width: 78, alignment: .trailing)
                         }
+                        // Log the prayer right where its time is shown. Sunrise keeps
+                        // the same width so the times stay aligned.
+                        if p.isPrayer {
+                            PrayerCheckButton(prayer: p)
+                                .frame(width: 36)
+                        } else {
+                            Color.clear.frame(width: 36, height: 1)
+                        }
                     }
-                    .padding(.vertical, Spacing.two)
+                    .padding(.vertical, p.isPrayer ? 0 : Spacing.two)
                     .padding(.horizontal, Spacing.two)
                     .background(isNext ? Palette.backgroundSelected : .clear)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
@@ -186,7 +202,7 @@ struct HomeView: View {
     private var continueReadingCard: some View {
         if let lr = bookmarks.lastRead, let s = allSurahs.first(where: { $0.number == lr.surah }) {
             NavigationLink {
-                SurahView(surah: s)
+                SurahView(surah: s, startAyah: lr.ayah)
             } label: {
                 Card {
                     HStack(spacing: Spacing.three) {
@@ -197,7 +213,7 @@ struct HomeView: View {
                             Text(loc.t("home.continueReading"))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(Palette.textSecondary)
-                            Text(loc.code == "ar" ? s.arabic : "\(s.name) · \(s.arabic)")
+                            Text(loc.code == "ar" ? "\(s.arabic) · \(lr.ayah)" : "\(s.name) \(s.number):\(lr.ayah) · \(s.arabic)")
                                 .font(.headline)
                                 .foregroundStyle(Palette.text)
                         }
@@ -221,6 +237,13 @@ struct HomeView: View {
     private var favouritesCard: some View {
         NavigationLink { FavouritesView() } label: {
             tile(icon: "heart.fill", label: loc.t("home.favourites"), tint: Palette.danger)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var tasbihCard: some View {
+        NavigationLink { TasbihView() } label: {
+            tile(icon: "circle.dotted.circle", label: loc.t("tasbih.title"), tint: Palette.primary)
         }
         .buttonStyle(.plain)
     }

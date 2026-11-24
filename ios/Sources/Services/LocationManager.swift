@@ -12,6 +12,11 @@ import AppKit
 final class LocationManager: NSObject, CLLocationManagerDelegate {
     var coordinate: CLLocationCoordinate2D?
     var placeName: String = ""
+    /// ISO country code of the current place (kept between launches), used to pick the
+    /// official calculation method.
+    var countryCode: String = UserDefaults.standard.string(forKey: "noor.countryCode") ?? "" {
+        didSet { UserDefaults.standard.set(countryCode, forKey: "noor.countryCode") }
+    }
     var status: CLAuthorizationStatus = .notDetermined
 
     @ObservationIgnored private let manager = CLLocationManager()
@@ -86,6 +91,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
             guard let p = placemarks?.first else { return }
             let city = p.locality ?? p.administrativeArea ?? p.country ?? ""
             self?.placeName = city
+            if let cc = p.isoCountryCode, !cc.isEmpty { self?.countryCode = cc }
         }
     }
 

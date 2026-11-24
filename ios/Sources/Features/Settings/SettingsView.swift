@@ -20,13 +20,32 @@ struct SettingsView: View {
 
             locationSection
 
-            Section(loc.t("settings.calculation")) {
-                Picker(loc.t("settings.method"), selection: $settings.method) {
+            Section {
+                Toggle(loc.t("settings.methodAuto"), isOn: $settings.methodAuto)
+                // Picking a method or madhab by hand turns Automatic off.
+                Picker(loc.t("settings.method"), selection: Binding(
+                    get: { settings.method },
+                    set: { settings.methodAuto = false; settings.method = $0 }
+                )) {
                     ForEach(MethodKey.allCases) { m in
                         Text(m.label).tag(m)
                     }
                 }
-                Picker(loc.t("settings.madhab"), selection: $settings.madhab) {
+                if settings.method == .morocco, let c = location.coordinate,
+                   let city = HabousTimes.nearestCity(lat: c.latitude, lng: c.longitude) {
+                    // Which of the ministry's 190 timetables applies here (its Arabic name, as published).
+                    LabeledContent(loc.t("settings.habousCity"), value: city.n)
+                }
+                NavigationLink {
+                    PrayerAdjustView()
+                } label: {
+                    LabeledContent(loc.t("settings.adjustTimes"),
+                                   value: settings.prayerOffsets.allSatisfy { $0 == 0 } ? "0" : "✓")
+                }
+                Picker(loc.t("settings.madhab"), selection: Binding(
+                    get: { settings.madhab },
+                    set: { settings.methodAuto = false; settings.madhab = $0 }
+                )) {
                     ForEach(MadhabKey.allCases) { m in
                         Text(loc.t(m == .hanafi ? "madhab.hanafi" : "madhab.other")).tag(m)
                     }
@@ -36,6 +55,10 @@ struct SettingsView: View {
                         Text(v > 0 ? "+\(v)" : "\(v)").tag(v)
                     }
                 }
+            } header: {
+                Text(loc.t("settings.calculation"))
+            } footer: {
+                Text(loc.t("settings.methodAutoFooter"))
             }
 
             Section(loc.t("settings.display")) {
@@ -112,7 +135,43 @@ struct SettingsView: View {
                 } footer: {
                     Text(loc.t("settings.adkarRemindersFooter"))
                 }
+                Section {
+                    Toggle(loc.t("settings.suhoorReminder"), isOn: $settings.suhoorReminder)
+                    if settings.suhoorReminder {
+                        Picker(loc.t("settings.suhoorLead"), selection: $settings.suhoorLeadMinutes) {
+                            ForEach([15, 30, 45, 60], id: \.self) { m in
+                                Text(String(format: loc.t("settings.minutesBefore"), m)).tag(m)
+                            }
+                        }
+                    }
+                    Toggle(loc.t("settings.iftarAlert"), isOn: $settings.iftarAlert)
+                    Toggle(loc.t("settings.qadrReminders"), isOn: $settings.qadrReminders)
+                } header: {
+                    Text(loc.t("settings.ramadanAlerts"))
+                } footer: {
+                    Text(loc.t("settings.ramadanAlertsFooter"))
+                }
             }
+
+            Section {
+                Picker(loc.t("settings.imsak"), selection: $settings.imsakMinutes) {
+                    ForEach([0, 5, 10, 15, 20], id: \.self) { m in
+                        Text(m == 0 ? loc.t("settings.imsakNone") : String(format: loc.t("settings.minutesBefore"), m)).tag(m)
+                    }
+                }
+            } header: {
+                Text(loc.t("ramadan.title"))
+            } footer: {
+                Text(loc.t("settings.imsakFooter"))
+            }
+
+            #if os(iOS)
+            Section {
+                Toggle(loc.t("settings.liveActivity"), isOn: $settings.liveActivity)
+            } footer: {
+                Text(loc.t("settings.liveActivityFooter"))
+            }
+            #endif
 
             // Its own section rather than a line buried under the version number:
             // a rating is the one thing a user can give back, and it has to be
@@ -150,9 +209,21 @@ struct SettingsView: View {
         }
         .onChange(of: settings.method) { _, _ in refresh() }
         .onChange(of: settings.madhab) { _, _ in refresh() }
+        .onChange(of: settings.methodAuto) { _, on in
+            if on { settings.applyCountry(location.countryCode) }
+            refresh()
+        }
+        .onChange(of: settings.prayerOffsets) { _, _ in refresh() }
         .onChange(of: settings.adhanSound) { _, _ in refresh() }
         .onChange(of: settings.enabledPrayers) { _, _ in refresh() }
         .onChange(of: settings.adkarReminders) { _, _ in refresh() }
+        .onChange(of: settings.hour12) { _, _ in refresh() }
+        .onChange(of: settings.hijriOffset) { _, _ in refresh() }
+        .onChange(of: settings.suhoorReminder) { _, _ in refresh() }
+        .onChange(of: settings.suhoorLeadMinutes) { _, _ in refresh() }
+        .onChange(of: settings.iftarAlert) { _, _ in refresh() }
+        .onChange(of: settings.qadrReminders) { _, _ in refresh() }
+        .onChange(of: settings.liveActivity) { _, _ in refresh() }
         // Granting access here must start the notifications that were blocked.
         .onChange(of: location.status) { _, _ in refresh() }
     }
@@ -215,5 +286,41 @@ struct SettingsView: View {
 
     private func refresh() {
         NotificationService.refresh(settings: settings, location: location, langCode: loc.code)
+        LiveActivityService.refresh(settings: settings, location: location, langCode: loc.code)
+    }
+}
+
+/// Per-prayer minute corrections so Noor matches the user's mosque.
+struct PrayerAdjustView: View {
+    @Environment(SettingsStore.self) private var settings
+    @Environment(LocalizationManager.self) private var loc
+
+    var body: some View {
+        @Bindable var settings = settings
+        Form {
+            Section {
+                ForEach(Array(PrayerTuning.prayers.enumerated()), id: \.offset) { i, prayer in
+                    Stepper(value: $settings.prayerOffsets[i], in: PrayerTuning.range) {
+                        HStack {
+                            Text(loc.t("prayer.\(prayer.rawValue)"))
+                            Spacer()
+                            let v = settings.prayerOffsets[i]
+                            Text("\(v > 0 ? "+" : "")\(v) \(loc.t("settings.minutesShort"))")
+                                .monospacedDigit()
+                                .foregroundStyle(v == 0 ? Palette.textSecondary : Palette.primary)
+                        }
+                    }
+                }
+            } footer: {
+                Text(loc.t("settings.adjustFooter"))
+            }
+            Section {
+                Button(loc.t("settings.adjustReset")) {
+                    settings.prayerOffsets = Array(repeating: 0, count: PrayerTuning.prayers.count)
+                }
+                .disabled(settings.prayerOffsets.allSatisfy { $0 == 0 })
+            }
+        }
+        .navigationTitle(loc.t("settings.adjustTimes"))
     }
 }

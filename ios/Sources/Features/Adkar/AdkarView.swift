@@ -353,6 +353,7 @@ struct DhikrReaderView: View {
                     .lineSpacing(8)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .environment(\.layoutDirection, .rightToLeft)
+                    .accessibilityIdentifier("dhikr.\(d.id).\(d.count)")   // UI tests: which dhikr, how many taps
 
                 if d.showTranslit(loc.code) && !d.translit.isEmpty {
                     Text(d.translit)
