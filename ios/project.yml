@@ -62,6 +62,8 @@ targets:
         PROVISIONING_PROFILE_SPECIFIER: "Noor App Store"
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
+        # Background App Refresh (adhan rescheduling): array keys the INFOPLIST_KEY_ settings can't hold.
+        INFOPLIST_FILE: Noor-Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Noor
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         # Lock Screen / Dynamic Island countdown (ActivityKit), started locally by the app.

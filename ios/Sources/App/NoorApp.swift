@@ -43,6 +43,9 @@ struct NoorApp: App {
                         NotificationService.refresh(settings: settings, location: location, langCode: loc.code)
                         LiveActivityService.refresh(settings: settings, location: location, langCode: loc.code)
                     }
+                    #if os(iOS)
+                    if phase == .background { BackgroundRefresh.submit() }
+                    #endif
                 }
                 // Arriving in another country (or the first fix) switches to its official method.
                 .onChange(of: location.countryCode) { _, code in
@@ -52,5 +55,13 @@ struct NoorApp: App {
                     }
                 }
         }
+        #if os(iOS)
+        // Keeps the adhan schedule rolling for people who rarely open the app
+        // (the ~10-day window would otherwise run out). Queues the next run first.
+        .backgroundTask(.appRefresh(BackgroundRefresh.taskID)) {
+            BackgroundRefresh.submit()
+            await MainActor.run { _ = NotificationService.refreshFromSavedContext() }
+        }
+        #endif
     }
 }

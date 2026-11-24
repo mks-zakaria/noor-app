@@ -175,6 +175,25 @@ final class Noor12Tests: XCTestCase {
         XCTAssertTrue(zip(picked, picked.dropFirst()).allSatisfy { $0.date <= $1.date })
     }
 
+    func testKeepAliveFollowsTheLastScheduledAlert() {
+        let now = Date()
+        let picked = (0..<5).map { i in
+            NotificationPlanner.Candidate(id: "c\(i)", date: now.addingTimeInterval(TimeInterval(i) * 3600),
+                                          priority: 0, content: UNNotificationContent())
+        }
+        let at = NotificationPlanner.keepAliveDate(after: picked.shuffled())
+        XCTAssertEqual(at, now.addingTimeInterval(4 * 3600 + 600), "10 minutes after the latest alert")
+        XCTAssertNil(NotificationPlanner.keepAliveDate(after: []), "Nothing scheduled, no notice")
+    }
+
+    func testKeepAliveStringsExistInEveryLanguage() {
+        for lang in ["en", "fr", "ar"] {
+            for key in ["notif.keepAliveTitle", "notif.keepAliveBody"] {
+                XCTAssertNotNil(Strings.table[key]?[lang], "\(key) missing in \(lang)")
+            }
+        }
+    }
+
     // MARK: Prayer log
 
     func testPrayerLogStreakAndQada() {

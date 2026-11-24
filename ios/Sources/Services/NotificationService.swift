@@ -1,5 +1,8 @@
 import Foundation
 import UserNotifications
+#if os(iOS)
+import BackgroundTasks
+#endif
 
 /// Schedules local notifications for upcoming prayer times.
 enum NotificationService {
@@ -116,10 +119,21 @@ enum NotificationService {
             }
         }
 
-        for c in NotificationPlanner.select(candidates, limit: NotificationPlanner.limit - repeatingSlots) {
+        // One slot is kept for the "open Noor" alert that follows the last scheduled one.
+        let selected = NotificationPlanner.select(candidates, limit: NotificationPlanner.limit - repeatingSlots - 1)
+        for c in selected {
             let comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: c.date)
             let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
             center.add(UNNotificationRequest(identifier: c.id, content: c.content, trigger: trigger))
+        }
+        if let at = NotificationPlanner.keepAliveDate(after: selected) {
+            let content = UNMutableNotificationContent()
+            content.title = Strings.t("notif.keepAliveTitle", lang)
+            content.body = Strings.t("notif.keepAliveBody", lang)
+            content.sound = .default
+            let comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: at)
+            center.add(UNNotificationRequest(identifier: NotificationPlanner.keepAliveID, content: content,
+                                             trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)))
         }
     }
 
@@ -187,12 +201,28 @@ enum NotificationService {
     /// Also publishes the prayer context the widgets compute from.
     static func refresh(settings: SettingsStore, location: LocationManager, langCode: String = "en") {
         PrayerContextSync.push(settings: settings, location: location, langCode: langCode)
-        guard settings.notificationsEnabled, let c = location.coordinate else { return }
+        guard let c = location.coordinate else { return }
+        refresh(settings: settings, lat: c.latitude, lng: c.longitude, langCode: langCode)
+    }
+
+    /// Background App Refresh entry point. There is no GPS fix in the background, so it
+    /// uses the last coordinate the app saved for the widgets. Without it, alerts would
+    /// stop once the ~10-day window runs out for anyone who never opens the app.
+    /// Returns false when there is nothing saved yet.
+    @discardableResult
+    static func refreshFromSavedContext() -> Bool {
+        guard let ctx = SharedPrayerContext.load() else { return false }
+        refresh(settings: SettingsStore(), lat: ctx.lat, lng: ctx.lng, langCode: LocalizationManager().code)
+        return true
+    }
+
+    private static func refresh(settings: SettingsStore, lat: Double, lng: Double, langCode: String) {
+        guard settings.notificationsEnabled else { return }
         let khatmahMinutes = KhatmahStore.activeReminderMinutes()
         let repeating = (settings.adkarReminders ? adkarReminderHours.count : 0) + (khatmahMinutes == nil ? 0 : 1)
         reschedule(
             Inputs(
-                lat: c.latitude, lng: c.longitude,
+                lat: lat, lng: lng,
                 method: settings.method, madhab: settings.madhab,
                 hour12: settings.hour12,
                 enabledPrayers: settings.enabledPrayers,
@@ -257,4 +287,30 @@ enum NotificationPlanner {
     static func select(_ candidates: [Candidate], limit: Int) -> [Candidate] {
         Array(candidates.sorted { ($0.date, $0.priority) < ($1.date, $1.priority) }.prefix(max(0, limit)))
     }
+
+    static let keepAliveID = "noor.keepalive"
+
+    /// When the "open Noor to keep your adhan alerts" notice fires: shortly after the last
+    /// alert that was scheduled. Every reschedule (opening the app, Background App Refresh)
+    /// replaces it with a later one, so it only appears if the schedule really ran out.
+    /// Neutral wording by design: it never comments on whether the user prayed.
+    static func keepAliveDate(after selected: [Candidate]) -> Date? {
+        selected.map(\.date).max()?.addingTimeInterval(10 * 60)
+    }
+}
+
+/// Reschedules prayer alerts from Background App Refresh, so they keep coming for
+/// people who use the widgets and rarely open the app.
+enum BackgroundRefresh {
+    static let taskID = "com.zakaria.noor.reschedule"
+    /// Ask for a run about twice a day; iOS decides the actual time.
+    static let interval: TimeInterval = 12 * 60 * 60
+
+    #if os(iOS)
+    static func submit(now: Date = Date()) {
+        let request = BGAppRefreshTaskRequest(identifier: taskID)
+        request.earliestBeginDate = now.addingTimeInterval(interval)
+        try? BGTaskScheduler.shared.submit(request)
+    }
+    #endif
 }

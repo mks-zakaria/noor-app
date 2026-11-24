@@ -202,6 +202,14 @@ extension Strings {
             "fr": "La portion du jour vous attend.",
             "ar": "وِرد اليوم بانتظارك.",
         ],
+        // Shown only when the scheduled alerts ran out (the app was not opened and iOS gave it
+        // no background time). Neutral on purpose: no comment on the user's prayers.
+        "notif.keepAliveTitle": ["en": "Keep your adhan alerts", "fr": "Gardez vos alertes d'adhan", "ar": "حافظ على تنبيهات الأذان"],
+        "notif.keepAliveBody": [
+            "en": "Open Noor once to schedule the next prayer alerts.",
+            "fr": "Ouvrez Noor une fois pour programmer les prochaines alertes de prière.",
+            "ar": "افتح نور مرة واحدة لجدولة تنبيهات الصلاة القادمة.",
+        ],
 
         // Settings
         "settings.ramadanAlerts": ["en": "Ramadan alerts", "fr": "Alertes du Ramadan", "ar": "تنبيهات رمضان"],
