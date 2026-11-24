@@ -20,6 +20,26 @@ final class QiblaManager: NSObject, CLLocationManagerDelegate {
 
     var isAvailable: Bool { CLLocationManager.headingAvailable() }
 
+    /// How far the compass can be trusted right now. Wrong-Qibla complaints are common in
+    /// prayer apps, and most come from an uncalibrated magnetometer, not from the bearing.
+    enum Quality: Equatable {
+        /// No reading yet.
+        case unknown
+        case good
+        /// Off by more than `Quality.maxGoodError` degrees: calibrate before trusting it.
+        case weak
+
+        /// Above this error the needle can point at the wrong wall of a room.
+        static let maxGoodError: Double = 15
+
+        static func from(accuracy: Double) -> Quality {
+            if accuracy < 0 { return .unknown }
+            return accuracy <= maxGoodError ? .good : .weak
+        }
+    }
+
+    var quality: Quality { .from(accuracy: accuracy) }
+
     func start() {
         guard isAvailable else { return }
         manager.startUpdatingHeading()

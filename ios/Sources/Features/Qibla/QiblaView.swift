@@ -4,6 +4,7 @@ struct QiblaView: View {
     @Environment(LocationManager.self) private var location
     @Environment(LocalizationManager.self) private var loc
     @State private var compass = QiblaManager()
+    @State private var showMap = false
 
     private var qiblaBearing: Double? {
         guard let c = location.coordinate else { return nil }
@@ -17,6 +18,8 @@ struct QiblaView: View {
     }
 
     private var isAligned: Bool {
+        // Never say "aligned" on a compass we know is off.
+        guard compass.quality != .weak else { return false }
         let diff = abs((relativeAngle.truncatingRemainder(dividingBy: 360) + 360)
             .truncatingRemainder(dividingBy: 360))
         return diff < 5 || diff > 355
@@ -47,6 +50,20 @@ struct QiblaView: View {
                         Text(loc.t("qibla.noCompass"))
                             .font(.footnote)
                             .foregroundStyle(Palette.danger)
+                    } else if compass.quality == .weak {
+                        calibrationCard
+                    }
+
+                    if let c = location.coordinate {
+                        Button {
+                            showMap = true
+                        } label: {
+                            Label(loc.t("qibla.showMap"), systemImage: "map")
+                        }
+                        .buttonStyle(.bordered)
+                        .sheet(isPresented: $showMap) {
+                            QiblaMapView(origin: c, bearing: q)
+                        }
                     }
                 } else if location.isDenied {
                     // `actions:` keeps the button attached to the message. As a
@@ -74,6 +91,27 @@ struct QiblaView: View {
             .onAppear { if location.isAuthorized { location.request() }; compass.start() }
             .onDisappear { compass.stop() }
         }
+    }
+
+    /// Shown while the heading error is above `QiblaManager.Quality.maxGoodError`.
+    private var calibrationCard: some View {
+        HStack(alignment: .top, spacing: Spacing.two) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Palette.accent)
+            VStack(alignment: .leading, spacing: Spacing.one) {
+                Text(loc.t("qibla.calibrateTitle"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.text)
+                Text(String(format: loc.t("qibla.calibrateBody"), Int(compass.accuracy.rounded())))
+                    .font(.footnote)
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(Spacing.three)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
     }
 
     private var compassDial: some View {

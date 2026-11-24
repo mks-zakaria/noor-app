@@ -211,6 +211,32 @@ extension Strings {
             "ar": "افتح نور مرة واحدة لجدولة تنبيهات الصلاة القادمة.",
         ],
 
+        // Qibla: compass accuracy and the map fallback
+        "qibla.calibrateTitle": [
+            "en": "Compass needs calibrating",
+            "fr": "La boussole doit être calibrée",
+            "ar": "البوصلة تحتاج إلى معايرة",
+        ],
+        "qibla.calibrateBody": [
+            "en": "It may be off by about %d°. Move your phone in a figure 8, away from metal, magnets and magnetic cases. Or check the direction on the map.",
+            "fr": "Elle peut se tromper d'environ %d°. Faites un 8 avec votre téléphone, loin du métal, des aimants et des étuis magnétiques. Ou vérifiez la direction sur la carte.",
+            "ar": "قد تنحرف بنحو %d°. حرّك هاتفك على شكل الرقم 8، بعيدًا عن المعادن والمغناطيس والأغطية المغناطيسية. أو تحقّق من الاتجاه على الخريطة.",
+        ],
+        "qibla.showMap": ["en": "Check on the map", "fr": "Vérifier sur la carte", "ar": "تحقّق على الخريطة"],
+        "qibla.mapYou": ["en": "You", "fr": "Vous", "ar": "أنت"],
+        "qibla.mapKaaba": ["en": "Kaaba", "fr": "Kaaba", "ar": "الكعبة"],
+        "qibla.mapHint": [
+            "en": "The Qibla is toward the top of the map. Use the streets and buildings around you to face it.",
+            "fr": "La Qibla est vers le haut de la carte. Repérez-vous aux rues et aux bâtiments autour de vous.",
+            "ar": "القبلة باتجاه أعلى الخريطة. استعن بالشوارع والمباني من حولك لتتجه إليها.",
+        ],
+        "qibla.mapDistance": [
+            "en": "%d km to the Kaaba · %d° from North",
+            "fr": "%d km jusqu'à la Kaaba · %d° depuis le Nord",
+            "ar": "%d كم إلى الكعبة · %d° من الشمال",
+        ],
+        "qibla.mapRecenter": ["en": "Back to my position", "fr": "Revenir à ma position", "ar": "العودة إلى موقعي"],
+
         // Settings
         "settings.ramadanAlerts": ["en": "Ramadan alerts", "fr": "Alertes du Ramadan", "ar": "تنبيهات رمضان"],
         "settings.ramadanAlertsFooter": [

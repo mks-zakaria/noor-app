@@ -14,6 +14,23 @@ final class TourUITests: XCTestCase {
     func testTourArabic() { tour(language: "ar", labels: Labels.ar) }
     func testPrayerSettingsEnglish() { prayerSettings(language: "en", adjust: "Adjust times") }
     func testPrayerSettingsArabic() { prayerSettings(language: "ar", adjust: "تعديل المواقيت") }
+    func testQiblaMapEnglish() { qiblaMap(language: "en", tab: "Qibla", button: "Check on the map") }
+    func testQiblaMapArabic() { qiblaMap(language: "ar", tab: "القبلة", button: "تحقّق على الخريطة") }
+
+    /// Qibla tab → "Check on the map" sheet (the compass-free fallback). Needs location
+    /// granted and a simulated position: the button only shows once there is a coordinate.
+    private func qiblaMap(language: String, tab: String, button: String) {
+        let app = XCUIApplication()
+        app.launchArguments += ["-noor.language", language]
+        app.launch()
+        sleep(2)
+        XCTAssertTrue(tap(app.tabBars.buttons[tab]), "qibla tab")
+        sleep(2)
+        shot(app, "\(language)-30-qibla")
+        XCTAssertTrue(tap(app.buttons[button]), "map button")
+        sleep(4)
+        shot(app, "\(language)-31-qibla-map")
+    }
 
     /// Settings → calculation section (automatic official method) → per-prayer minute offsets.
     private func prayerSettings(language: String, adjust: String) {

@@ -1,5 +1,6 @@
 import XCTest
 import UserNotifications
+import CoreLocation
 @testable import Noor
 
 /// Logic behind the 1.2 features: Quran index, Khatmah schedule, Ramadan dates,
@@ -184,6 +185,32 @@ final class Noor12Tests: XCTestCase {
         let at = NotificationPlanner.keepAliveDate(after: picked.shuffled())
         XCTAssertEqual(at, now.addingTimeInterval(4 * 3600 + 600), "10 minutes after the latest alert")
         XCTAssertNil(NotificationPlanner.keepAliveDate(after: []), "Nothing scheduled, no notice")
+    }
+
+    // MARK: Qibla
+
+    func testCompassQualityThresholds() {
+        XCTAssertEqual(QiblaManager.Quality.from(accuracy: -1), .unknown)
+        XCTAssertEqual(QiblaManager.Quality.from(accuracy: 5), .good)
+        XCTAssertEqual(QiblaManager.Quality.from(accuracy: 15), .good)
+        XCTAssertEqual(QiblaManager.Quality.from(accuracy: 25), .weak)
+    }
+
+    func testQiblaMapDistanceAndCamera() {
+        let casablanca = CLLocationCoordinate2D(latitude: 33.5731, longitude: -7.5898)
+        let km = QiblaMapView.distanceKm(from: casablanca)
+        XCTAssertEqual(km, 4_800, accuracy: 150, "Casablanca–Makkah is about 4,800 km")
+        let bearing = PrayerService.qiblaBearing(lat: casablanca.latitude, lng: casablanca.longitude)
+        XCTAssertEqual(QiblaMapView.camera(origin: casablanca, bearing: bearing).heading, bearing, accuracy: 0.001,
+                       "The map turns so the Qibla is at the top")
+    }
+
+    func testQiblaStringsExistInEveryLanguage() {
+        let keys = ["qibla.calibrateTitle", "qibla.calibrateBody", "qibla.showMap", "qibla.mapYou",
+                    "qibla.mapKaaba", "qibla.mapHint", "qibla.mapDistance", "qibla.mapRecenter"]
+        for lang in ["en", "fr", "ar"] {
+            for key in keys { XCTAssertNotNil(Strings.table[key]?[lang], "\(key) missing in \(lang)") }
+        }
     }
 
     func testKeepAliveStringsExistInEveryLanguage() {
