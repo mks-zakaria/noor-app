@@ -77,6 +77,6 @@ paint(np.clip(star - crescent, 0, 1))   # star sits on top of the crescent
 # ---- finalize: downscale for AA, save ----
 out = Image.fromarray(np.clip(img, 0, 255).astype('uint8'), 'RGB')
 out = out.resize((1024, 1024), Image.LANCZOS)
-dest = '/Users/mks/projects/apps/noor-swift/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png'
+dest = '/Users/mks/projects/apps/noor/app/ios/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png'
 out.save(dest)
 print('saved', dest, out.size, out.mode)
