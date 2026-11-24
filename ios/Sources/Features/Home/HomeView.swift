@@ -275,8 +275,23 @@ struct HomeView: View {
         f.locale = loc.locale
         f.dateFormat = "d MMMM, yyyy"
         let date = Calendar.current.date(byAdding: .day, value: settings.hijriOffset, to: Date()) ?? Date()
-        return f.string(from: date) + (loc.code == "ar" ? " هـ" : " AH")
+        if loc.code == "ar" {
+            // Apple's Arabic names say "الآخرة"/"الآخر"; the names used in Morocco
+            // and the Maghreb are "جمادى الثانية" and "ربيع الثاني".
+            let month = cal.component(.month, from: date)
+            f.dateFormat = "d"
+            let day = f.string(from: date)
+            f.dateFormat = "yyyy"
+            let year = f.string(from: date)
+            return "\(day) \(Self.arabicHijriMonths[month - 1])، \(year) هـ"
+        }
+        return f.string(from: date) + " AH"
     }
+
+    static let arabicHijriMonths = [
+        "محرم", "صفر", "ربيع الأول", "ربيع الثاني", "جمادى الأولى", "جمادى الثانية",
+        "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة",
+    ]
 
     private var gregorianDate: String {
         let f = DateFormatter()
