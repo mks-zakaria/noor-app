@@ -1,10 +1,9 @@
-"""iPhone Duo App Store set (APP_IPHONE_DUO): 4 framed app screens, English and Arabic.
+"""iPhone Duo App Store set (APP_IPHONE_DUO): 4 framed app screens, English, French and Arabic.
 
     python3 make_duo.py
 
 Raw captures in duo/raw/ come from the TourUITests run on the iPhone Duo simulator
-(iOS 27.2 Duo runtime 24B91016s, inner display 1398x2034). French listings fall back to the
-English Duo set. Same composer as the iPad set (make_ipad.py). Output: duo/<lang>/duo/*.png.
+(iOS 27.2 Duo runtime 24B91016s, inner display 1398x2034). Same composer as the iPad set (make_ipad.py). Output: duo/<lang>/duo/*.png.
 """
 from pathlib import Path
 from PIL import Image
@@ -17,6 +16,10 @@ CAPTIONS = {
            ("03-ramadan", "Ready for Ramadan", "Suhoor and iftar countdown, timetable, du'as"),
            ("09-quran-juz", "The whole Quran, offline", "114 surahs · 30 juz · search"),
            ("06-ibadah", "Track every prayer", "Prayer log, Qada, Khatmah and Tasbih")],
+    "fr": [("01-home", "Ne manquez plus une prière", "Des heures précises pour votre position"),
+           ("03-ramadan", "Prêt pour le Ramadan", "Shour et iftar en compte à rebours, horaires, invocations"),
+           ("02-quran", "Tout le Coran, hors connexion", "114 sourates · traduction · recherche"),
+           ("04-ibadah", "Suivez chaque prière", "Suivi, qada, khatma et tasbih")],
     "ar": [("01-home", "لا تفوّتك صلاة", "مواقيت دقيقة أينما كنت"),
            ("03-ramadan", "استعدّ لرمضان", "عدّ تنازلي للسحور والإفطار، إمساكية، أدعية"),
            ("09-quran-juz", "القرآن كاملًا دون إنترنت", "١١٤ سورة، ٣٠ جزءًا، وبحث"),

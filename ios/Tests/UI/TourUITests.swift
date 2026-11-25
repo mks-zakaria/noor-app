@@ -12,6 +12,7 @@ final class TourUITests: XCTestCase {
 
     func testTourEnglish() { tour(language: "en", labels: Labels.en) }
     func testTourArabic() { tour(language: "ar", labels: Labels.ar) }
+    func testTourFrench() { tour(language: "fr", labels: Labels.fr) }
     func testPrayerSettingsEnglish() { prayerSettings(language: "en", adjust: "Adjust times") }
     func testPrayerSettingsArabic() { prayerSettings(language: "ar", adjust: "تعديل المواقيت") }
     func testLandscapeEnglish() { landscape(language: "en", quran: "Quran", adkar: "Adkar") }
@@ -82,6 +83,8 @@ final class TourUITests: XCTestCase {
                                ramadan: "Ramadan", juz: "Juz", prayer: "Prayer")
         static let ar = Labels(ibadah: "عبادات", quran: "القرآن", khatmah: "الختمة", tasbih: "المسبحة",
                                ramadan: "رمضان", juz: "الأجزاء", prayer: "الصلاة")
+        static let fr = Labels(ibadah: "Ibadat", quran: "Coran", khatmah: "Khatma", tasbih: "Tasbih",
+                               ramadan: "Ramadan", juz: "Juz", prayer: "Prière")
     }
 
     private func tour(language: String, labels: Labels) {
