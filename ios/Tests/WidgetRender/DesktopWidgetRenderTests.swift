@@ -40,7 +40,7 @@ final class DesktopWidgetRenderTests: XCTestCase {
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .environment(\.colorScheme, .dark)
                 let r = ImageRenderer(content: view)
-                r.scale = 2
+                r.scale = Double(ProcessInfo.processInfo.environment["NOOR_DESKTOP_SCALE"] ?? "2") ?? 2
                 guard let png = r.uiImage?.pngData() else { return XCTFail("render \(name) \(city.lang)") }
                 try png.write(to: out.appendingPathComponent("\(city.lang)-\(name).png"))
             }
