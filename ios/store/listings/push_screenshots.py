@@ -37,6 +37,7 @@ DISPLAY_TYPES = {
     "6.5-inch": "APP_IPHONE_65",
     "13-inch": "APP_IPAD_PRO_3GEN_129",
     "watch": "APP_WATCH_SERIES_10",
+    "desktop": "APP_DESKTOP",
 }
 
 # Portrait pixel sizes Apple accepts per slot. Checked before upload because the
@@ -46,6 +47,7 @@ VALID_SIZES = {
     "APP_IPHONE_65": {(1242, 2688), (1284, 2778)},
     "APP_IPAD_PRO_3GEN_129": {(2048, 2732), (2064, 2752)},
     "APP_WATCH_SERIES_10": {(416, 496), (374, 446)},
+    "APP_DESKTOP": {(1280, 800), (1440, 900), (2560, 1600), (2880, 1800)},
 }
 
 
