@@ -38,6 +38,7 @@ DISPLAY_TYPES = {
     "13-inch": "APP_IPAD_PRO_3GEN_129",
     "watch": "APP_WATCH_SERIES_10",
     "desktop": "APP_DESKTOP",
+    "duo": "APP_IPHONE_DUO",
 }
 
 # Portrait pixel sizes Apple accepts per slot. Checked before upload because the
@@ -48,6 +49,9 @@ VALID_SIZES = {
     "APP_IPAD_PRO_3GEN_129": {(2048, 2732), (2064, 2752)},
     "APP_WATCH_SERIES_10": {(416, 496), (374, 446)},
     "APP_DESKTOP": {(1280, 800), (1440, 900), (2560, 1600), (2880, 1800)},
+    # Live API slot, not in the published spec 4.6.1. Size = Duo inner display on the
+    # iOS 27.2 simulator; Apple has not published the accepted sizes.
+    "APP_IPHONE_DUO": {(1398, 2034)},
 }
 
 
