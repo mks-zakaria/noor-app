@@ -78,14 +78,17 @@ final class LockScreenPosterTests: XCTestCase {
                        CGSize(width: 360, height: 640), "story-\(city.lang)-\(n)-\(scene.rawValue)")
                 render(Poster(scene: scene, snap: snap, city: city, now: date, copy: copy, layout: .square),
                        CGSize(width: 360, height: 360), "square-\(city.lang)-\(n)-\(scene.rawValue)")
+                // 13" iPad App Store slot: 1032×1376 pt at 2× → 2064×2752 px.
+                render(Poster(scene: scene, snap: snap, city: city, now: date, copy: copy, layout: .ipad),
+                       CGSize(width: 1032, height: 1376), "ipad-\(city.lang)-\(n)-\(scene.rawValue)", scale: 2)
             }
         }
     }
 
-    /// Renders at 3× so 440 pt → 1320 px and 360 pt → 1080 px.
-    private func render<V: View>(_ view: V, _ size: CGSize, _ name: String) {
+    /// Renders at 3× so 440 pt → 1320 px and 360 pt → 1080 px (iPad: 2×, 1032 pt → 2064 px).
+    private func render<V: View>(_ view: V, _ size: CGSize, _ name: String, scale: CGFloat = 3) {
         let r = ImageRenderer(content: view.frame(width: size.width, height: size.height))
-        r.scale = 3
+        r.scale = scale
         r.isOpaque = true
         guard let image = r.uiImage, let png = image.pngData() else { return XCTFail("render failed: \(name)") }
         try? png.write(to: outDir.appendingPathComponent("\(name).png"))
@@ -98,7 +101,7 @@ final class LockScreenPosterTests: XCTestCase {
 
 // MARK: - Poster
 
-private enum PosterLayout { case store, story, square }
+private enum PosterLayout { case store, story, square, ipad }
 
 private struct Poster: View {
     let scene: LockScreenPosterTests.Scene
@@ -116,15 +119,15 @@ private struct Poster: View {
                 NightSky()
                 VStack(spacing: 0) {
                     headline
-                        .padding(.horizontal, layout == .square ? 22 : 28)
-                        .padding(.top, layout == .store ? 70 : (layout == .story ? 34 : 22))
+                        .padding(.horizontal, layout == .square ? 22 : (layout == .ipad ? 80 : 28))
+                        .padding(.top, headlineTop)
                     Spacer(minLength: 0)
                 }
                 // The phone sits below the headline; in the square it is cropped at the bottom.
-                phone
+                device
                     .scaleEffect(phoneScale, anchor: .top)
-                    .frame(width: 440 * phoneScale, height: 956 * phoneScale, alignment: .top)
-                    .position(x: g.size.width / 2, y: phoneTop + 956 * phoneScale / 2)
+                    .frame(width: deviceSize.width * phoneScale, height: deviceSize.height * phoneScale, alignment: .top)
+                    .position(x: g.size.width / 2, y: phoneTop + deviceSize.height * phoneScale / 2)
             }
             .environment(\.layoutDirection, rtl ? .rightToLeft : .leftToRight)
             .environment(\.locale, Locale(identifier: city.lang))
@@ -132,8 +135,26 @@ private struct Poster: View {
         }
     }
 
+    private var deviceSize: CGSize {
+        layout == .ipad ? CGSize(width: 820, height: 1093) : CGSize(width: 440, height: 956)
+    }
+
+    @ViewBuilder private var device: some View {
+        if layout == .ipad { tablet } else { phone }
+    }
+
+    private var headlineTop: CGFloat {
+        switch layout {
+        case .store: return 70
+        case .story: return 34
+        case .square: return 22
+        case .ipad: return 96
+        }
+    }
+
     private var phoneScale: CGFloat {
         switch layout {
+        case .ipad: return 1.0
         case .store: return 0.80
         case .story: return 0.50
         case .square: return 0.56
@@ -145,6 +166,7 @@ private struct Poster: View {
         case .store: return 270
         case .story: return 162
         case .square: return 128
+        case .ipad: return 380
         }
     }
 
@@ -170,6 +192,7 @@ private struct Poster: View {
         case .store: return 270 - 70 - 16
         case .story: return 162 - 34 - 12
         case .square: return 128 - 22 - 10
+        case .ipad: return 380 - 96 - 30
         }
     }
 
@@ -178,6 +201,7 @@ private struct Poster: View {
         case .store: return 38
         case .story: return 30
         case .square: return 24
+        case .ipad: return 64
         }
     }
 
@@ -197,6 +221,18 @@ private struct Poster: View {
         .frame(width: 440, height: 956)
         .shadow(color: .black.opacity(0.55), radius: 30, y: 18)
     }
+
+    /// An iPad in portrait: even bezel, no Dynamic Island, the same Lock Screen laid out wider.
+    private var tablet: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 44, style: .continuous).fill(.black)
+            LockScreen(scene: scene, snap: snap, city: city, now: now, isPad: true)
+                .frame(width: 820 - 36, height: 1093 - 36)
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        }
+        .frame(width: 820, height: 1093)
+        .shadow(color: .black.opacity(0.55), radius: 40, y: 24)
+    }
 }
 
 /// The Lock Screen itself: date, inline widget, clock, widget row, Live Activity.
@@ -205,6 +241,8 @@ private struct LockScreen: View {
     let snap: PrayerSnapshot
     let city: LockScreenRenderTests.City
     let now: Date
+    /// iPad Lock Screen: a bigger clock, widgets scaled up, the Live Activity at banner width.
+    var isPad = false
 
     var body: some View {
         ZStack {
@@ -214,17 +252,21 @@ private struct LockScreen: View {
                 inlineRow
                     .padding(.top, 34)
                 Text(clock)
-                    .font(.system(size: 104, weight: .semibold, design: .rounded))
+                    .font(.system(size: isPad ? 150 : 104, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white.opacity(0.95))
                     .environment(\.layoutDirection, .leftToRight)
                     .padding(.top, -6)
                 widgetRow
-                    .padding(.top, 8)
+                    .scaleEffect(isPad ? 1.3 : 1, anchor: .top)
+                    .padding(.top, isPad ? 18 : 8)
                 Spacer()
                 liveActivity
+                    .frame(maxWidth: isPad ? 520 : .infinity)
                     .padding(.horizontal, 12)
+                // iPad has no flashlight/camera buttons on the Lock Screen.
                 bottomButtons
+                    .opacity(isPad ? 0 : 1)
                     .padding(.top, 22)
                     .padding(.bottom, 26)
             }

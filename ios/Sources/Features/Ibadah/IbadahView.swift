@@ -205,6 +205,7 @@ struct PrayerCheckButton: View {
             }
         }
         .accessibilityLabel("\(prayer.label(loc.code)): \(status.map { loc.t("tracker.\($0.rawValue)") } ?? loc.t("tracker.notLogged"))")
+        .accessibilityIdentifier("check.\(prayer.rawValue)")
     }
 
     private func color(_ s: PrayerStatus?) -> Color {

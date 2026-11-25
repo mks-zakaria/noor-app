@@ -14,6 +14,25 @@ final class TourUITests: XCTestCase {
     func testTourArabic() { tour(language: "ar", labels: Labels.ar) }
     func testPrayerSettingsEnglish() { prayerSettings(language: "en", adjust: "Adjust times") }
     func testPrayerSettingsArabic() { prayerSettings(language: "ar", adjust: "تعديل المواقيت") }
+    func testLandscapeEnglish() { landscape(language: "en", quran: "Quran", adkar: "Adkar") }
+
+    /// iPad only matters here (iPhone stays portrait): every tab in landscape.
+    private func landscape(language: String, quran: String, adkar: String) {
+        let app = XCUIApplication()
+        app.launchArguments += ["-noor.language", language]
+        app.launch()
+        sleep(2)
+        allowLocation(app)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        shot(app, "\(language)-40-land-home")
+        tab(app, quran); sleep(2)
+        shot(app, "\(language)-41-land-quran")
+        tab(app, adkar); sleep(2)
+        shot(app, "\(language)-42-land-adkar")
+        XCUIDevice.shared.orientation = .portrait
+    }
+
     func testQiblaMapEnglish() { qiblaMap(language: "en", tab: "Qibla", button: "Check on the map") }
     func testQiblaMapArabic() { qiblaMap(language: "ar", tab: "القبلة", button: "تحقّق على الخريطة") }
 
@@ -24,7 +43,8 @@ final class TourUITests: XCTestCase {
         app.launchArguments += ["-noor.language", language]
         app.launch()
         sleep(2)
-        XCTAssertTrue(tap(app.tabBars.buttons[tab]), "qibla tab")
+        allowLocation(app)
+        XCTAssertTrue(self.tab(app, tab), "qibla tab")
         sleep(2)
         shot(app, "\(language)-30-qibla")
         XCTAssertTrue(tap(app.buttons[button]), "map button")
@@ -38,6 +58,7 @@ final class TourUITests: XCTestCase {
         app.launchArguments += ["-noor.language", language]
         app.launch()
         sleep(2)
+        allowLocation(app)
         let gear = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'gear' OR label CONTAINS[c] 'setting' OR label CONTAINS[c] 'réglage' OR label CONTAINS 'الإعدادات'")).firstMatch
         XCTAssertTrue(tap(gear), "settings button")
         let cell = app.staticTexts[adjust]
@@ -68,6 +89,7 @@ final class TourUITests: XCTestCase {
         app.launchArguments += ["-noor.language", language]
         app.launch()
         sleep(2)
+        allowLocation(app)
         shot(app, "\(language)-01-home")
 
         app.swipeUp()
@@ -86,7 +108,7 @@ final class TourUITests: XCTestCase {
         }
 
         // Ibadah tab and its tools.
-        app.tabBars.buttons[labels.ibadah].tap()
+        tab(app, labels.ibadah)
         sleep(1)
         shot(app, "\(language)-06-ibadah")
         if tap(app.buttons["tool.book.closed.fill"]) {
@@ -103,7 +125,7 @@ final class TourUITests: XCTestCase {
         }
 
         // Quran: Juz list and full-text search.
-        app.tabBars.buttons[labels.quran].tap()
+        tab(app, labels.quran)
         sleep(1)
         if tap(app.buttons[labels.juz]) {
             shot(app, "\(language)-09-quran-juz")
@@ -115,6 +137,26 @@ final class TourUITests: XCTestCase {
             sleep(2)
             shot(app, "\(language)-10-quran-search")
         }
+    }
+
+    /// Tabs are a `TabBar` on iPhone but a floating top bar of plain buttons on iPad.
+    @discardableResult
+    private func tab(_ app: XCUIApplication, _ label: String) -> Bool {
+        let bar = app.tabBars.buttons[label]
+        if bar.waitForExistence(timeout: 2) { bar.tap(); return true }
+        return tap(app.buttons[label].firstMatch)
+    }
+
+    /// First run on a fresh install: the location card's Continue, then the system dialog.
+    /// The same path a user takes; `simctl privacy grant` does not survive the test reinstall.
+    private func allowLocation(_ app: XCUIApplication) {
+        let cont = app.buttons.matching(NSPredicate(format: "label IN %@", ["Continue", "متابعة", "Continuer"])).firstMatch
+        guard cont.waitForExistence(timeout: 2), cont.isHittable else { return }
+        cont.tap()
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let allow = springboard.buttons["Allow While Using App"]
+        if allow.waitForExistence(timeout: 5) { allow.tap() }
+        sleep(3)
     }
 
     private func back(_ app: XCUIApplication) {

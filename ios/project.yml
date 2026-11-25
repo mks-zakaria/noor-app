@@ -60,7 +60,9 @@ targets:
         # Xcode/UserData/Provisioning Profiles/.
         CODE_SIGN_STYLE: Manual
         PROVISIONING_PROFILE_SPECIFIER: "Noor App Store"
-        TARGETED_DEVICE_FAMILY: "1"
+        # Universal since 1.2: iPhone and iPad (set on the target; a project-level value is
+        # silently overridden, see APP-STORE-REVIEW.md section 3).
+        TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
         # Background App Refresh (adhan rescheduling): array keys the INFOPLIST_KEY_ settings can't hold.
         INFOPLIST_FILE: Noor-Info.plist
@@ -69,6 +71,9 @@ targets:
         # Lock Screen / Dynamic Island countdown (ActivityKit), started locally by the app.
         INFOPLIST_KEY_NSSupportsLiveActivities: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # iPad: every orientation (needed for Split View / Stage Manager; without it iPad falls
+        # back to the iPhone list and a rotated iPad shows the app sideways).
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         # Declares export compliance in the binary so App Store Connect stops
         # asking on every upload. Accurate as of build 3: the app implements no
         # encryption of its own — the only crypto is HTTPS via URLSession, which
