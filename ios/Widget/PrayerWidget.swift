@@ -140,7 +140,11 @@ struct PrayerProvider: TimelineProvider {
 
 /// The app's chosen language, for strings the widget gallery shows.
 func widgetLanguage() -> String {
+    #if os(watchOS)
+    SharedPrayerContext.load()?.language ?? "en"
+    #else
     UserDefaults(suiteName: WidgetContract.suiteName)?.string(forKey: WidgetContract.Keys.language) ?? "en"
+    #endif
 }
 
 // MARK: - Live countdowns (frozen for marketing renders)
@@ -567,7 +571,7 @@ private extension View {
         self
             .environment(\.layoutDirection, rtl ? .rightToLeft : .leftToRight)
             .containerBackground(for: .widget) {
-                if family == .systemSmall || family == .systemMedium {
+                if family.isHomeScreen {
                     LinearGradient(colors: [.noorDeep, .noorGreen], startPoint: .topLeading, endPoint: .bottomTrailing)
                 } else {
                     Color.clear
@@ -592,7 +596,11 @@ struct PrayerWidget: Widget {
         }
         .configurationDisplayName(Strings.t("widget.prayerName", widgetLanguage()))
         .description(Strings.t("widget.prayerDesc", widgetLanguage()))
+        #if os(watchOS)
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
+        #else
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .systemSmall, .systemMedium])
+        #endif
     }
 }
 
@@ -619,5 +627,16 @@ struct TodayPrayersWidget: Widget {
         .configurationDisplayName(Strings.t("widget.todayName", widgetLanguage()))
         .description(Strings.t("widget.todayDesc", widgetLanguage()))
         .supportedFamilies([.accessoryRectangular])
+    }
+}
+
+extension WidgetFamily {
+    /// Home Screen sizes get the green background; accessory (Lock Screen, watch) sizes stay clear.
+    var isHomeScreen: Bool {
+        #if os(watchOS)
+        false
+        #else
+        self == .systemSmall || self == .systemMedium
+        #endif
     }
 }

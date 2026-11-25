@@ -265,6 +265,12 @@ extension Strings {
 
         // Widgets
         "widget.nextPrayer": ["en": "Next prayer", "fr": "Prochaine prière", "ar": "الصلاة القادمة"],
+        // Apple Watch, before the iPhone has sent a location.
+        "watch.openPhone": [
+            "en": "Open Noor on your iPhone once to show prayer times here.",
+            "fr": "Ouvrez Noor une fois sur votre iPhone pour afficher les horaires ici.",
+            "ar": "افتح نور على iPhone مرة واحدة لعرض مواقيت الصلاة هنا.",
+        ],
         "widget.openNoor": ["en": "Open Noor to set your location", "fr": "Ouvrez Noor pour définir votre position", "ar": "افتح نور لتحديد موقعك"],
         "widget.prayerName": ["en": "Prayer Times", "fr": "Heures de prière", "ar": "مواقيت الصلاة"],
         "widget.prayerDesc": ["en": "The next prayer and today's times.", "fr": "La prochaine prière et les horaires du jour.", "ar": "الصلاة القادمة ومواقيت اليوم."],

@@ -22,7 +22,12 @@ struct SharedPrayerContext: Codable, Equatable {
     private static let key = "noor.shared.prayerContext"
 
     static func load() -> SharedPrayerContext? {
+        #if os(watchOS)
+        // The watch app and its complications share a keychain group, not an App Group (WatchKeychain).
+        guard let data = WatchKeychain.data(key) else { return nil }
+        #else
         guard let data = UserDefaults(suiteName: WidgetContract.suiteName)?.data(forKey: key) else { return nil }
+        #endif
         return try? JSONDecoder().decode(SharedPrayerContext.self, from: data)
     }
 
@@ -30,7 +35,11 @@ struct SharedPrayerContext: Codable, Equatable {
     @discardableResult
     func save() -> Bool {
         guard Self.load() != self, let data = try? JSONEncoder().encode(self) else { return false }
+        #if os(watchOS)
+        WatchKeychain.set(data, Self.key)
+        #else
         UserDefaults(suiteName: WidgetContract.suiteName)?.set(data, forKey: Self.key)
+        #endif
         return true
     }
 }

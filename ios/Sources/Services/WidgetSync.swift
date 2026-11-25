@@ -35,5 +35,9 @@ enum PrayerContextSync {
         if ctx.save() {
             for kind in prayerWidgetKinds { WidgetCenter.shared.reloadTimelines(ofKind: kind) }
         }
+        #if os(iOS) && canImport(WatchConnectivity)
+        // Every refresh, not only on change: the watch may have been paired or reinstalled since.
+        WatchBridge.shared.send(ctx, offsets: PrayerTuning.load())
+        #endif
     }
 }

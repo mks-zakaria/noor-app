@@ -17,6 +17,9 @@ struct NoorApp: App {
 
     init() {
         UNUserNotificationCenter.current().delegate = notifDelegate
+        #if os(iOS) && canImport(WatchConnectivity)
+        WatchBridge.shared.activate()
+        #endif
     }
 
     var body: some Scene {
