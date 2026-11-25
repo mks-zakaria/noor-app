@@ -278,9 +278,15 @@ targets:
       - package: Adhan
       - target: NoorWidget-macOS
         embed: true
+    # Mac App Store: sandboxed. Network = Quran recitation audio; location = prayer times and
+    # Qibla; photos-add = "Save Image" on share cards; the App Group feeds the Mac widget.
     entitlements:
-      path: Noor.entitlements
+      path: Noor-macOS.entitlements
       properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.personal-information.location: true
+        com.apple.security.personal-information.photos-library: true
         com.apple.security.application-groups:
           - group.com.zakaria.noor.shared
     settings:
@@ -309,6 +315,7 @@ targets:
     entitlements:
       path: Widget-macOS.entitlements
       properties:
+        com.apple.security.app-sandbox: true
         com.apple.security.application-groups:
           - group.com.zakaria.noor.shared
     settings:

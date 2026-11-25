@@ -7,8 +7,17 @@ struct RootView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.requestReview) private var requestReview
-    @State private var selection = 0
+    @State private var selection = RootView.initialTab
     @State private var celebrationCount: Int?
+
+    /// 0 in release. Debug builds accept `-tab <n>` so screenshots can open any tab.
+    private static var initialTab: Int {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-tab"), i + 1 < args.count, let n = Int(args[i + 1]) { return n }
+        #endif
+        return 0
+    }
 
     var body: some View {
         TabView(selection: $selection) {

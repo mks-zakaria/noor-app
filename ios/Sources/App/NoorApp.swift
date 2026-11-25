@@ -58,6 +58,10 @@ struct NoorApp: App {
                     }
                 }
         }
+        #if os(macOS)
+        // A Mac window big enough for the prayer list and the Quran (it opened at 900x450).
+        .defaultSize(width: 1280, height: 800)
+        #endif
         #if os(iOS)
         // Keeps the adhan schedule rolling for people who rarely open the app
         // (the ~10-day window would otherwise run out). Queues the next run first.

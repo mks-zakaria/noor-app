@@ -22,11 +22,24 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     @ObservationIgnored private let manager = CLLocationManager()
     @ObservationIgnored private let geocoder = CLGeocoder()
 
+    /// Debug builds only (`-demoLocation`): a fixed Casablanca fix for screenshots on devices where
+    /// the system location prompt cannot be answered by a script (the Mac). Never in release.
+    @ObservationIgnored private var demo = false
+
     override init() {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         status = manager.authorizationStatus
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-demoLocation") {
+            demo = true
+            status = .authorizedAlways
+            coordinate = CLLocationCoordinate2D(latitude: 33.5731, longitude: -7.5898)
+            placeName = "Casablanca"
+            countryCode = "MA"
+        }
+        #endif
     }
 
     var isAuthorized: Bool {
@@ -46,6 +59,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     func request() {
+        if demo { return }
         let status = manager.authorizationStatus
         switch status {
         case .notDetermined:
@@ -80,12 +94,13 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     // MARK: CLLocationManagerDelegate
 
     func locationManagerDidChangeAuthorization(_ m: CLLocationManager) {
+        if demo { return }
         status = m.authorizationStatus
         if isAuthorized { m.requestLocation() }
     }
 
     func locationManager(_ m: CLLocationManager, didUpdateLocations locs: [CLLocation]) {
-        guard let loc = locs.last else { return }
+        guard !demo, let loc = locs.last else { return }
         coordinate = loc.coordinate
         geocoder.reverseGeocodeLocation(loc) { [weak self] placemarks, _ in
             guard let p = placemarks?.first else { return }
