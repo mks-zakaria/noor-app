@@ -235,7 +235,13 @@ extension Strings {
             "fr": "%d km jusqu'à la Kaaba · %d° depuis le Nord",
             "ar": "%d كم إلى الكعبة · %d° من الشمال",
         ],
+        "qibla.mapHintMac": [
+            "en": "The green line runs from you toward the Kaaba. Follow its direction from where you stand; north is at the top.",
+            "fr": "La ligne verte part de vous vers la Kaaba. Suivez sa direction depuis votre position ; le nord est en haut.",
+            "ar": "الخط الأخضر يمتد منك نحو الكعبة. اتبع اتجاهه من مكانك؛ الشمال في أعلى الخريطة.",
+        ],
         "qibla.mapRecenter": ["en": "Back to my position", "fr": "Revenir à ma position", "ar": "العودة إلى موقعي"],
+        "qibla.mapRoute": ["en": "See the whole route", "fr": "Voir tout le trajet", "ar": "عرض المسار كاملًا"],
 
         // Settings
         "settings.ramadanAlerts": ["en": "Ramadan alerts", "fr": "Alertes du Ramadan", "ar": "تنبيهات رمضان"],

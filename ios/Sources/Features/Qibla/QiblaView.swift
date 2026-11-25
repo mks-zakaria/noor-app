@@ -26,6 +26,19 @@ struct QiblaView: View {
     }
 
     var body: some View {
+        #if os(macOS)
+        // Macs have no compass: once the location is known the map is the Qibla screen.
+        if let c = location.coordinate, let q = qiblaBearing {
+            NavigationStack { QiblaMapView(origin: c, bearing: q, embedded: true) }
+        } else {
+            compassScreen
+        }
+        #else
+        compassScreen
+        #endif
+    }
+
+    private var compassScreen: some View {
         NavigationStack {
             VStack(spacing: Spacing.four) {
                 if let q = qiblaBearing {

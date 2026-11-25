@@ -25,11 +25,9 @@ struct RootView: View {
                 .tag(0)
                 .tabItem { Label(loc.t("tab.prayer"), systemImage: "sun.horizon.fill") }
 
-#if !os(macOS)
-            QiblaView()
+            QiblaView()     // compass on iPhone/iPad, the Qibla map on the Mac
                 .tag(1)
                 .tabItem { Label(loc.t("tab.qibla"), systemImage: "location.north.line.fill") }
-#endif
 
             QuranListView()
                 .tag(2)

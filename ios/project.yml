@@ -294,7 +294,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor
         MARKETING_VERSION: "1.2.0"
-        CURRENT_PROJECT_VERSION: "11"
+        CURRENT_PROJECT_VERSION: "12"
         SWIFT_VERSION: "5.0"
         INFOPLIST_FILE: Resources-macOS/Info.plist
         GENERATE_INFOPLIST_FILE: NO
@@ -341,7 +341,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widget
         MARKETING_VERSION: "1.2.0"
-        CURRENT_PROJECT_VERSION: "11"
+        CURRENT_PROJECT_VERSION: "12"
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Widget-macOS/Info.plist

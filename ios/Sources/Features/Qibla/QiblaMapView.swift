@@ -9,6 +9,8 @@ struct QiblaMapView: View {
     let origin: CLLocationCoordinate2D
     /// Bearing to the Kaaba in degrees from true north (PrayerService.qiblaBearing).
     let bearing: Double
+    /// true on the Mac, where the map is the Qibla tab itself (no compass): no sheet chrome.
+    var embedded = false
 
     @Environment(LocalizationManager.self) private var loc
     @Environment(\.dismiss) private var dismiss
@@ -16,16 +18,29 @@ struct QiblaMapView: View {
 
     static let kaaba = CLLocationCoordinate2D(latitude: 21.422487, longitude: 39.826206)
 
-    init(origin: CLLocationCoordinate2D, bearing: Double) {
+    init(origin: CLLocationCoordinate2D, bearing: Double, embedded: Bool = false) {
         self.origin = origin
         self.bearing = bearing
+        self.embedded = embedded
         _position = State(initialValue: .camera(Self.camera(origin: origin, bearing: bearing)))
     }
 
     /// Close enough to see the street, rotated so the Qibla is "up".
+    /// On the Mac (no compass, nothing to turn) the map stays north-up, a little wider, and the
+    /// line carries the direction.
     static func camera(origin: CLLocationCoordinate2D, bearing: Double) -> MapCamera {
+        #if os(macOS)
+        MapCamera(centerCoordinate: origin, distance: 3000, heading: 0, pitch: 0)
+        #else
         MapCamera(centerCoordinate: origin, distance: 1200, heading: bearing, pitch: 0)
+        #endif
     }
+
+    #if os(macOS)
+    static let hintKey = "qibla.mapHintMac"
+    #else
+    static let hintKey = "qibla.mapHint"
+    #endif
 
     /// Great-circle distance to the Kaaba, in kilometres.
     static func distanceKm(from origin: CLLocationCoordinate2D) -> Double {
@@ -34,7 +49,25 @@ struct QiblaMapView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        if embedded {
+            map.navigationTitle(loc.t("qibla.title"))
+        } else {
+            NavigationStack {
+                map
+                    .navigationTitle(loc.t("qibla.title"))
+                    #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                    #endif
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(loc.t("common.done")) { dismiss() }
+                        }
+                    }
+            }
+        }
+    }
+
+    private var map: some View {
             Map(position: $position) {
                 MapPolyline(coordinates: [origin, Self.kaaba], contourStyle: .geodesic)
                     .stroke(Palette.primary, lineWidth: 5)
@@ -46,7 +79,7 @@ struct QiblaMapView: View {
             .mapStyle(.standard(pointsOfInterest: .excludingAll))
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: Spacing.one) {
-                    Text(loc.t("qibla.mapHint"))
+                    Text(loc.t(Self.hintKey))
                         .font(.subheadline)
                         .foregroundStyle(Palette.text)
                         .multilineTextAlignment(.center)
@@ -54,8 +87,13 @@ struct QiblaMapView: View {
                                 Int(Self.distanceKm(from: origin).rounded()), Int(bearing.rounded())))
                         .font(.footnote.monospacedDigit())
                         .foregroundStyle(Palette.textSecondary)
-                    Button(loc.t("qibla.mapRecenter")) {
-                        withAnimation { position = .camera(Self.camera(origin: origin, bearing: bearing)) }
+                    HStack(spacing: Spacing.four) {
+                        Button(loc.t("qibla.mapRecenter")) {
+                            withAnimation { position = .camera(Self.camera(origin: origin, bearing: bearing)) }
+                        }
+                        Button(loc.t("qibla.mapRoute")) {
+                            withAnimation { position = .automatic }   // frames you, the line and the Kaaba
+                        }
                     }
                     .font(.footnote)
                 }
@@ -63,15 +101,5 @@ struct QiblaMapView: View {
                 .frame(maxWidth: .infinity)
                 .background(.regularMaterial)
             }
-            .navigationTitle(loc.t("qibla.title"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(loc.t("common.done")) { dismiss() }
-                }
-            }
-        }
     }
 }
