@@ -1,0 +1,378 @@
+name: Noor
+options:
+  bundleIdPrefix: com.noor
+  deploymentTarget:
+    iOS: "18.0"
+    macOS: "15.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  Adhan:
+    url: https://github.com/batoulapps/adhan-swift
+    from: "1.0.0"
+
+targets:
+  Noor:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+        excludes:
+          - "**/.claude/**"
+          - "**/.claude"
+      - path: Resources
+        excludes:
+          - "**/.claude/**"
+          - "**/.claude"
+    dependencies:
+      - package: Adhan
+      - target: NoorWidget
+      # Apple Watch app, embedded at Noor.app/Watch (installs on the paired watch).
+      - target: NoorWatch
+        embed: true
+        codeSign: true
+        copy:
+          destination: productsDirectory
+          subpath: "$(CONTENTS_FOLDER_PATH)/Watch"
+    entitlements:
+      path: Noor.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.zakaria.noor.shared
+    scheme:
+      testTargets:
+        - NoorTests
+        - NoorUITests
+        - NoorWidgetRender
+    # Critical Alerts (adhan overrides silent/Focus) needs Apple approval before it
+    # can be signed. Request it at https://developer.apple.com/contact/request/notifications-critical-alerts-entitlement
+    # for team JF83ACY9N9 + com.noor.app, then uncomment to enable:
+    # entitlements:
+    #   path: Noor.entitlements
+    #   properties:
+    #     com.apple.developer.usernotifications.critical-alerts: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "9"
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        # Manual signing with API-minted profiles: this Mac's Xcode has no
+        # Apple ID session, so automatic signing can't register capabilities.
+        # Profiles "Noor Native Dev" / "NoorNativeWidget Dev" are created via
+        # the App Store Connect API and installed in ~/Library/Developer/
+        # Xcode/UserData/Provisioning Profiles/.
+        CODE_SIGN_STYLE: Manual
+        PROVISIONING_PROFILE_SPECIFIER: "Noor App Store"
+        # Universal since 1.2: iPhone and iPad (set on the target; a project-level value is
+        # silently overridden, see APP-STORE-REVIEW.md section 3).
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        # Background App Refresh (adhan rescheduling): array keys the INFOPLIST_KEY_ settings can't hold.
+        INFOPLIST_FILE: Noor-Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Noor
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Lock Screen / Dynamic Island countdown (ActivityKit), started locally by the app.
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # iPad: every orientation (needed for Split View / Stage Manager; without it iPad falls
+        # back to the iPhone list and a rotated iPad shows the app sideways).
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        # Declares export compliance in the binary so App Store Connect stops
+        # asking on every upload. Accurate as of build 3: the app implements no
+        # encryption of its own — the only crypto is HTTPS via URLSession, which
+        # is Apple's OS-provided encryption and therefore exempt. Revisit if the
+        # app ever adds CryptoKit/CommonCrypto or its own cipher.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        # Only the when-in-use key is declared: the app calls
+        # requestWhenInUseAuthorization() and never requests always-authorization.
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Noor uses your location to calculate prayer times for your city and to point the compass toward the Qibla. It is not tracked or shared."
+        # Required the moment the app can write an image to the photo library.
+        # The share sheet for an ayah or du'ā card offers "Save Image", and iOS
+        # terminates the app on that tap if this key is absent — a reviewer
+        # tapping Save would see a crash, not a bug report.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Noor saves the ayah or du'ā card you are sharing to your photos, only when you tap Save Image."
+
+  # Lock-screen WidgetKit extension. Compiles the shared contract file from
+  # Sources/Services so app and widget can never disagree about the App Group
+  # container or the preference keys.
+  NoorWidget:
+    type: app-extension
+    platform: iOS
+    # The prayer widget computes times itself, so it compiles the prayer model,
+    # the calculator and the string tables; Sources/Shared is the App Group contract
+    # (prayer context, tasbih state, intents, Live Activity attributes).
+    sources:
+      - path: Widget
+      - path: Sources/Services/WidgetPrefs.swift
+      - path: Sources/Shared
+      - path: Sources/Models/PrayerModels.swift
+      - path: Sources/Services/PrayerService.swift
+      - path: Sources/Localization/Strings.swift
+      - path: Sources/Localization/StringsV12.swift
+      # Ministry of Habous cities (coordinates + horizon) for the official Moroccan times.
+      - path: Resources/Morocco
+        buildPhase: resources
+    dependencies:
+      - package: Adhan
+    entitlements:
+      path: NoorWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.zakaria.noor.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widget
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "9"
+        SWIFT_VERSION: "5.0"
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Manual
+        PROVISIONING_PROFILE_SPECIFIER: "NoorWidget App Store"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Widget/Info.plist
+
+  # Apple Watch app: next prayer, countdown and today's times, computed on the watch from the
+  # context the iPhone sends over WatchConnectivity (Sources/Services/WatchBridge.swift).
+  # Shares storage with its complications through a keychain group, not an App Group (WatchKeychain).
+  NoorWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: Watch/App
+        excludes: ["Info.plist"]
+      - path: Watch/Shared
+      - path: Watch/Assets.xcassets
+      - path: Widget/PrayerWidget.swift
+      - path: Sources/Services/WidgetPrefs.swift
+      - path: Sources/Shared/SharedContext.swift
+      - path: Sources/Shared/PrayerTuning.swift
+      - path: Sources/Shared/HabousTimes.swift
+      - path: Sources/Shared/RamadanCalendar.swift
+      - path: Sources/Models/PrayerModels.swift
+      - path: Sources/Services/PrayerService.swift
+      - path: Sources/Localization/Strings.swift
+      - path: Sources/Localization/StringsV12.swift
+      - path: Resources/Morocco
+        buildPhase: resources
+    dependencies:
+      - package: Adhan
+      - target: NoorWatchWidget
+    entitlements:
+      path: Watch/NoorWatch.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.watchkitapp
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "9"
+        SWIFT_VERSION: "5.0"
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Watch/App/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Noor
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.zakaria.noor
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SKIP_INSTALL: YES
+
+  # Watch complications: the iPhone Lock Screen prayer widgets (accessory families) on the watch face.
+  NoorWatchWidget:
+    type: app-extension
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: Watch/Widget
+        excludes: ["Info.plist"]
+      - path: Watch/Shared
+      - path: Widget/PrayerWidget.swift
+      - path: Sources/Services/WidgetPrefs.swift
+      - path: Sources/Shared/SharedContext.swift
+      - path: Sources/Shared/PrayerTuning.swift
+      - path: Sources/Shared/HabousTimes.swift
+      - path: Sources/Shared/RamadanCalendar.swift
+      - path: Sources/Models/PrayerModels.swift
+      - path: Sources/Services/PrayerService.swift
+      - path: Sources/Localization/Strings.swift
+      - path: Sources/Localization/StringsV12.swift
+      - path: Resources/Morocco
+        buildPhase: resources
+    dependencies:
+      - package: Adhan
+    entitlements:
+      path: Watch/NoorWatch.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.watchkitapp.widget
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "9"
+        SWIFT_VERSION: "5.0"
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Watch/Widget/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Noor
+        SKIP_INSTALL: YES
+
+  # Not shipped — renders the share card so its layout is checked against real
+  # passages rather than eyeballed once.
+  NoorTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/Unit
+    dependencies:
+      - target: Noor
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.tests
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Noor.app/Noor"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  # Not shipped — covers the behaviours a compile cannot prove, starting with
+  # auto-scroll actually moving the page.
+  NoorUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/UI
+    dependencies:
+      - target: Noor
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.uitests
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Noor
+
+  # macOS companion — shares all Swift sources with the iOS target.
+  # Qibla tab is excluded via #if at compile time; WidgetKit calls compile
+  # as no-ops when no widget extension target is linked.
+  Noor-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+        excludes:
+          - "**/.claude/**"
+          - "**/.claude"
+      - path: Resources
+        excludes:
+          - "**/.claude/**"
+          - "**/.claude"
+          - "Assets.xcassets"   # the Mac target has its own catalog in Resources-macOS
+      # macOS loads the app icon from a classic .icns via CFBundleIconFile.
+      # The shared Assets.xcassets compiles fine on iOS but produces no app
+      # icon output on macOS, so ship a dedicated .icns for the Mac target.
+      - path: Resources-macOS
+        buildPhase: resources
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: Adhan
+      - target: NoorWidget-macOS
+        embed: true
+    # Mac App Store: sandboxed. Network = Quran recitation audio; location = prayer times and
+    # Qibla; photos-add = "Save Image" on share cards; the App Group feeds the Mac widget.
+    entitlements:
+      path: Noor-macOS.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.personal-information.location: true
+        com.apple.security.personal-information.photos-library: true
+        com.apple.security.application-groups:
+          - group.com.zakaria.noor.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "12"
+        SWIFT_VERSION: "5.0"
+        INFOPLIST_FILE: Resources-macOS/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        # The Mac App Store requires an asset catalog with the app icon (ITMS-90546).
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # macOS needs a location/photo usage description in the custom plist.
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+
+  # macOS WidgetKit extension — shares the verse data + prefs contract, but has
+  # its own @main bundle and widget config (macOS has no accessory families).
+  NoorWidget-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Widget-macOS
+        excludes:
+          - Info.plist
+      - path: Widget/Verses.swift
+      - path: Sources/Services/WidgetPrefs.swift
+      # Prayer widget on the Mac desktop: the same views and prayer engine as the iPhone
+      # widgets, so the desktop shows exactly the Mac app's times.
+      - path: Widget/PrayerWidget.swift
+      - path: Watch/Shared/WatchPalette.swift      # Color.noorGreen / noorDeep / noorGold
+      - path: Sources/Shared/SharedContext.swift
+      - path: Sources/Shared/PrayerTuning.swift
+      - path: Sources/Shared/HabousTimes.swift
+      - path: Sources/Shared/RamadanCalendar.swift
+      - path: Sources/Models/PrayerModels.swift
+      - path: Sources/Services/PrayerService.swift
+      - path: Sources/Localization/Strings.swift
+      - path: Sources/Localization/StringsV12.swift
+      - path: Resources/Morocco
+        buildPhase: resources
+    dependencies:
+      - package: Adhan
+    entitlements:
+      path: Widget-macOS.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - group.com.zakaria.noor.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widget
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "12"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Widget-macOS/Info.plist
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+
+  # Not shipped — renders the Lock Screen widgets and the Live Activity banner to
+  # PNGs at fixed moments; tools/make_lockscreen.py turns them into store
+  # screenshots and ad images. Hostless: it compiles the widget views directly.
+  NoorWidgetRender:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/WidgetRender
+      - path: Widget
+        excludes:
+          - NoorWidgetBundle.swift
+          - Info.plist
+      - path: Sources/Shared
+      - path: Sources/Services/WidgetPrefs.swift
+      - path: Sources/Models/PrayerModels.swift
+      - path: Sources/Services/PrayerService.swift
+      - path: Sources/Localization/Strings.swift
+      - path: Sources/Localization/StringsV12.swift
+      - path: Resources/Morocco
+        buildPhase: resources
+    dependencies:
+      - package: Adhan
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widgetrender
+        DEVELOPMENT_TEAM: "JF83ACY9N9"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES

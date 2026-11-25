@@ -1,0 +1,22 @@
+{
+  "en-US": {
+    "name": "Noor — Prayer Times & Qibla",
+    "subtitle": "Adhan, Quran, Adkar & Compass",
+    "keywords": "hisn,muslim,islam,athan,azan,ramadan,hijri,dua,dhikr,fajr,namaz,tasbih,wudu,witr,tahajjud,istikhara",
+    "promotionalText": "Accurate prayer times wherever you are, a Qibla compass, the full Quran with audio recitation, and daily adkar — in one clean app. English, French & Arabic.",
+    "description": "Noor brings your daily worship into one quiet, beautiful place: accurate prayer times, a Qibla compass, the complete Quran, and the remembrances that carry you through the day.\n\nPrayer times are calculated on your device from your location using the trusted Adhan engine — no account, no server, no tracking. Choose from twelve calculation methods (Muslim World League, Umm al-Qura, ISNA, Egyptian, Karachi, Diyanet, and more) and the Hanafi or Shafi/Maliki/Hanbali madhab so the times match your local mosque. The home screen shows today's Hijri and Gregorian dates, a live countdown to the next prayer, sunrise, and the last third of the night.\n\nPRAYER & NOTIFICATIONS\n• Adhan notifications for each prayer — pick exactly which prayers notify\n• Adhan sound on or off for prayer reminders\n• Hijri date with a manual day adjustment for local moon sighting\n\nQIBLA\n• A clean compass that points to the Kaaba from wherever you are\n\nQURAN\n• All 114 surahs in Uthmani Arabic script with Sahih International (English) or Hamidullah (French) translation\n• Audio recitation by Mishary Rashid Alafasy\n• Auto-scroll at your own reading pace, so you can recite hands-free\n• Bookmarks, a continue-reading card, search, and adjustable Arabic text size\n• Surahs you open are cached, so re-reading works offline\n\nADKAR & DAILY WIRD\n• Morning and evening adkar with Arabic, transliteration, and translation\n• The complete Hisn al-Muslim — 132 chapters of authentic du'ās\n• Tap-to-count repeat counters and favourites\n• Share any ayah or du'ā as a beautiful card\n• A daily wird checklist — prayers, Quran, istighfar, salawat — that resets each morning\n\nLEARN\n• Step-by-step guides: wudu, ghusl, how to pray, rak'ah counts, witr, duha, tahajjud, jumu'ah, Eid, janazah, tarawih, istikhara, the traveller's prayer, and more\n\nNoor speaks English, French, and Arabic (with full right-to-left layout), offers light and dark themes, and collects no data whatsoever. Your location never leaves your phone.\n\nMay it help you keep your prayers on time and your heart in remembrance.",
+    "whatsNew": "• A refreshed app icon\n• Small improvements and fixes"
+  },
+  "en-GB": {
+    "extends": "en-US",
+    "whatsNew": "• A refreshed app icon\n• Small improvements and fixes"
+  },
+  "en-AU": {
+    "extends": "en-US",
+    "whatsNew": "• A refreshed app icon\n• Small improvements and fixes"
+  },
+  "en-CA": {
+    "extends": "en-US",
+    "whatsNew": "• A refreshed app icon\n• Small improvements and fixes"
+  }
+}
