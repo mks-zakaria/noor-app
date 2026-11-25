@@ -77,6 +77,34 @@ struct PrayerSnapshot {
         return f.string(from: d)
     }
 
+    /// "15 Jumada II 1448 AH", with the user's Hijri correction; in Arabic the Maghreb month
+    /// names the app uses (HomeView.arabicHijriMonths), not Apple's.
+    var hijriLine: String {
+        let h = RamadanService.hijriComponents(date, offset: ctx.hijriOffset)
+        if lang == "ar" {
+            let months = ["محرم", "صفر", "ربيع الأول", "ربيع الثاني", "جمادى الأولى", "جمادى الثانية",
+                          "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"]
+            return "\(h.day) \(months[max(0, min(11, h.month - 1))])، \(h.year) هـ"
+        }
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .islamicUmmAlQura)
+        f.locale = Locale(identifier: lang)
+        f.dateFormat = "d MMMM yyyy"
+        let shifted = Calendar.current.date(byAdding: .day, value: ctx.hijriOffset, to: date) ?? date
+        return f.string(from: shifted) + " AH"
+    }
+
+    /// One Ramadan line for the large widget: the next suhoor end or iftar during the month,
+    /// otherwise the countdown to it; nothing in Shawwal.
+    var ramadanLine: String? {
+        if let f = fasting { return "\(t(f.isIftar ? "ramadan.iftar" : "ramadan.suhoorEnds")) \(clock(f.at))" }
+        if case .before(let d) = phase {
+            return d == 0 ? t("ramadan.startsTomorrow")
+                : "\(String(format: t("ramadan.titleYear"), ramadan?.year ?? 0)) · \(String(format: t("ramadan.inDays"), d))"
+        }
+        return nil
+    }
+
     /// "6:12" without AM/PM, for the tightest spots.
     func shortClock(_ d: Date) -> String {
         let f = DateFormatter()
@@ -196,7 +224,11 @@ struct TimedRing<Label: View>: View {
             } currentValueLabel: {
                 label()
             }
+            #if os(macOS)
+            .gaugeStyle(.linearCapacity)        // Lock Screen ring styles do not exist on the Mac
+            #else
             .gaugeStyle(.accessoryCircularCapacity)
+            #endif
         } else {
             ProgressView(timerInterval: since...max(since.addingTimeInterval(60), until), countsDown: false) {
                 EmptyView()
@@ -217,15 +249,73 @@ struct NextPrayerView: View {
     var body: some View {
         if let s = snapshot {
             switch family {
+            #if !os(macOS)
             case .accessoryCircular: circular(s)
             case .accessoryRectangular: rectangular(s)
             case .accessoryInline: inline(s)
+            #endif
             case .systemMedium: medium(s)
+            case .systemLarge: large(s)
             default: small(s)
             }
         } else {
             NeedsLocationView(family: family)
         }
+    }
+
+    /// The whole day (Mac desktop, iPad): the next prayer with its countdown and the time after
+    /// it, every time of the day including sunrise, then the Hijri date and the Ramadan line.
+    private func large(_ s: PrayerSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(s.t("widget.nextPrayer").uppercased())
+                        .font(.caption2.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                    Text(s.name(s.next.name))
+                        .font(.system(size: 28, weight: .bold)).foregroundStyle(.white)
+                        .minimumScaleFactor(0.7).lineLimit(1)
+                }
+                Spacer()
+                if s.lang != "ar" {
+                    Text(s.next.name.ar).font(.system(size: 26, weight: .semibold)).foregroundStyle(Color.noorGold)
+                }
+            }
+            HStack(alignment: .firstTextBaseline) {
+                Text(s.clock(s.next.at)).font(.title3.weight(.semibold)).foregroundStyle(Color.noorGold)
+                Spacer()
+                Countdown(from: s.date, to: s.next.at)
+                    .font(.title3.weight(.semibold).monospacedDigit()).foregroundStyle(.white)
+            }
+            Divider().overlay(Color.white.opacity(0.2))
+            VStack(spacing: 3) {
+                ForEach(prayerOrder) { p in
+                    let isNext = s.next.name == p && Calendar.current.isDate(s.next.at, inSameDayAs: s.date)
+                    HStack {
+                        Text(s.name(p)).font(.callout.weight(isNext ? .bold : .regular))
+                        Spacer()
+                        if let at = s.times[p] {
+                            Text(s.clock(at)).font(.callout.monospacedDigit().weight(isNext ? .bold : .regular))
+                        }
+                    }
+                    .foregroundStyle(isNext ? Color.noorGold : (p.isPrayer ? .white : .white.opacity(0.6)))
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(isNext ? Color.white.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 6))
+                }
+            }
+            Spacer(minLength: 0)
+            HStack {
+                Text(s.hijriLine).font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                Spacer()
+                if !s.ctx.place.isEmpty {
+                    Label(s.ctx.place, systemImage: "location.fill").font(.caption).foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(1)
+                }
+            }
+            if let line = s.ramadanLine {
+                Text(line).font(.caption.weight(.semibold)).foregroundStyle(Color.noorGold).lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     /// Ring filling from the previous prayer to the next, with the next prayer's time inside.
@@ -341,14 +431,18 @@ struct RamadanWidgetView: View {
         if let s = snapshot {
             if let f = s.fasting {
                 switch family {
+                #if !os(macOS)
                 case .accessoryCircular: fastingCircular(s, f)
                 case .accessoryInline: Label("\(eventName(s, f)) \(s.clock(f.at))", systemImage: icon(f))
+                #endif
                 default: fastingRectangular(s, f)
                 }
             } else {
                 switch family {
+                #if !os(macOS)
                 case .accessoryCircular: countdownCircular(s)
                 case .accessoryInline: Label(headline(s), systemImage: "moon.stars.fill")
+                #endif
                 default: countdownRectangular(s)
                 }
             }
@@ -507,7 +601,7 @@ struct TodayPrayersView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            NeedsLocationView(family: .accessoryRectangular)
+            NeedsLocationView(family: .compactListFamily)
         }
     }
 
@@ -542,6 +636,7 @@ struct NeedsLocationView: View {
     var body: some View {
         let lang = widgetLanguage()
         switch family {
+        #if !os(macOS)
         case .accessoryCircular:
             ZStack {
                 AccessoryWidgetBackground()
@@ -549,6 +644,7 @@ struct NeedsLocationView: View {
             }
         case .accessoryInline:
             Label(Strings.t("widget.openNoor", lang), systemImage: "location.slash")
+        #endif
         default:
             Label(Strings.t("widget.openNoor", lang), systemImage: "location.slash")
                 .font(.caption)
@@ -598,12 +694,16 @@ struct PrayerWidget: Widget {
         .description(Strings.t("widget.prayerDesc", widgetLanguage()))
         #if os(watchOS)
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
+        #elseif os(macOS)
+        // Mac desktop and Notification Center: no Lock Screen families on the Mac.
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         #else
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .systemSmall, .systemMedium])
         #endif
     }
 }
 
+#if !os(macOS)
 struct RamadanWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: PrayerWidgetKinds.ramadan, provider: PrayerProvider()) { entry in
@@ -617,7 +717,9 @@ struct RamadanWidget: Widget {
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
+#endif
 
+#if !os(macOS)
 struct TodayPrayersWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: PrayerWidgetKinds.today, provider: PrayerProvider()) { entry in
@@ -629,14 +731,29 @@ struct TodayPrayersWidget: Widget {
         .supportedFamilies([.accessoryRectangular])
     }
 }
+#endif
 
 extension WidgetFamily {
     /// Home Screen sizes get the green background; accessory (Lock Screen, watch) sizes stay clear.
     var isHomeScreen: Bool {
         #if os(watchOS)
         false
+        #elseif os(macOS)
+        true
         #else
-        self == .systemSmall || self == .systemMedium
+        self == .systemSmall || self == .systemMedium || self == .systemLarge
+        #endif
+    }
+}
+
+extension WidgetFamily {
+    /// The family TodayPrayersView draws its empty state in: rectangular on the Lock Screen,
+    /// medium on the Mac desktop (no Lock Screen families there).
+    static var compactListFamily: WidgetFamily {
+        #if os(macOS)
+        .systemMedium
+        #else
+        .accessoryRectangular
         #endif
     }
 }

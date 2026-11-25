@@ -294,7 +294,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor
         MARKETING_VERSION: "1.2.0"
-        CURRENT_PROJECT_VERSION: "10"
+        CURRENT_PROJECT_VERSION: "11"
         SWIFT_VERSION: "5.0"
         INFOPLIST_FILE: Resources-macOS/Info.plist
         GENERATE_INFOPLIST_FILE: NO
@@ -315,6 +315,22 @@ targets:
           - Info.plist
       - path: Widget/Verses.swift
       - path: Sources/Services/WidgetPrefs.swift
+      # Prayer widget on the Mac desktop: the same views and prayer engine as the iPhone
+      # widgets, so the desktop shows exactly the Mac app's times.
+      - path: Widget/PrayerWidget.swift
+      - path: Watch/Shared/WatchPalette.swift      # Color.noorGreen / noorDeep / noorGold
+      - path: Sources/Shared/SharedContext.swift
+      - path: Sources/Shared/PrayerTuning.swift
+      - path: Sources/Shared/HabousTimes.swift
+      - path: Sources/Shared/RamadanCalendar.swift
+      - path: Sources/Models/PrayerModels.swift
+      - path: Sources/Services/PrayerService.swift
+      - path: Sources/Localization/Strings.swift
+      - path: Sources/Localization/StringsV12.swift
+      - path: Resources/Morocco
+        buildPhase: resources
+    dependencies:
+      - package: Adhan
     entitlements:
       path: Widget-macOS.entitlements
       properties:
@@ -325,7 +341,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zakaria.noor.widget
         MARKETING_VERSION: "1.2.0"
-        CURRENT_PROJECT_VERSION: "10"
+        CURRENT_PROJECT_VERSION: "11"
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Widget-macOS/Info.plist
